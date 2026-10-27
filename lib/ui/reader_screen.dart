@@ -173,7 +173,7 @@ class _MushafPage extends StatelessWidget {
               const SizedBox(width: 10),
               Text('سورة ${quran.surah(r.surah).arabicName}',
                   textDirection: TextDirection.rtl,
-                  style: TextStyle(fontFamily: 'AmiriQuran', fontSize: fontSize * 0.9, color: TartilColors.hijau)),
+                  style: TextStyle(fontFamily: 'Hafs', fontSize: fontSize * 0.9, color: TartilColors.hijau)),
               const SizedBox(width: 10),
               const Rub(size: 22),
             ],
@@ -184,7 +184,7 @@ class _MushafPage extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(quran.ayahs.first.text,
               textDirection: TextDirection.rtl,
-              style: TextStyle(fontFamily: 'AmiriQuran', fontSize: fontSize * 0.9, height: 1.9)),
+              style: TextStyle(fontFamily: 'Hafs', fontSize: fontSize * 0.9, height: 1.9)),
         );
       case RowKind.line:
         final bg = blok ? TartilColors.blok[blockOfLine(r.lineInPage)] : Colors.transparent;
@@ -223,7 +223,7 @@ class _MushafPage extends StatelessWidget {
   Widget _token(PageToken t, double fontSize) {
     final hl = _inHighlight(t.ayah);
     final base = TextStyle(
-      fontFamily: 'AmiriQuran',
+      fontFamily: 'Hafs',
       fontSize: fontSize,
       height: 2.0,
       color: Colors.black,

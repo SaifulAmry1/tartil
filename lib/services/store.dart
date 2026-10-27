@@ -12,10 +12,12 @@ import 'notifications.dart';
 
 class AppState extends ChangeNotifier {
   static const _key = 'profil_v1';
+  static const _activeKey = 'profil_aktif';
 
   final QuranData quran;
   final SharedPreferences _prefs;
   final List<Profile> profiles = [];
+  String? _activeId;
 
   AppState._(this.quran, this._prefs);
 
@@ -30,8 +32,22 @@ class AppState extends ChangeNotifier {
         s.profiles.add(Profile.fromJson(p as Map<String, dynamic>));
       }
     }
+    s._activeId = prefs.getString(_activeKey);
     s.refreshAll();
     return s;
+  }
+
+  /// Profil yang sedang dipakai di beranda (default: profil pertama).
+  Profile? get active {
+    if (profiles.isEmpty) return null;
+    return profiles.firstWhere((p) => p.id == _activeId,
+        orElse: () => profiles.first);
+  }
+
+  Future<void> setActive(Profile p) async {
+    _activeId = p.id;
+    await _prefs.setString(_activeKey, p.id);
+    notifyListeners();
   }
 
   Future<void> _save() async {
@@ -65,6 +81,8 @@ class AppState extends ChangeNotifier {
     final i = profiles.indexWhere((x) => x.id == p.id);
     if (i < 0) {
       profiles.add(p);
+      _activeId = p.id;
+      await _prefs.setString(_activeKey, p.id);
     } else {
       profiles[i] = p;
     }

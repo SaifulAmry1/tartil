@@ -28,6 +28,9 @@ flutter:
     - assets/quran/
     - assets/model/
   fonts:
+    - family: Hafs
+      fonts:
+        - asset: assets/fonts/UthmanicHafs.ttf
     - family: AmiriQuran
       fonts:
         - asset: assets/fonts/AmiriQuran-Regular.ttf

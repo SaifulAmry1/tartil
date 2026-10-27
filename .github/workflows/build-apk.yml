@@ -13,7 +13,7 @@ env:
   FLUTTER_VERSION: 3.47.8
   # Model Whisper khusus bacaan Al-Qur'an, dikonversi ke GGML untuk whisper.cpp.
   HF_MODEL: tarteel-ai/whisper-base-ar-quran
-  MODEL_KEY: ggml-quran-base-q5_1-v2
+  MODEL_KEY: ggml-quran-base-q5_1-v3
 
 jobs:
   model:
@@ -47,6 +47,15 @@ jobs:
           for f in ['vocab.json', 'added_tokens.json']:
               if not os.path.exists(os.path.join(d, f)):
                   hf_hub_download('openai/whisper-base', f, local_dir=d)
+          # Konverter memakai max_length sebagai n_text_ctx; model ini menyimpan
+          # 1024 di sana padahal positional embedding decoder berukuran 448,
+          # sehingga whisper.cpp menolak memuat model. Samakan.
+          import json
+          cfg_path = os.path.join(d, 'config.json')
+          cfg = json.load(open(cfg_path))
+          print('max_length', cfg.get('max_length'), 'max_target_positions', cfg.get('max_target_positions'))
+          cfg['max_length'] = cfg['max_target_positions']
+          json.dump(cfg, open(cfg_path, 'w'), indent=2)
           PY
           echo '--- Kartu model (cek lisensi) ---'
           head -n 40 hf-model/README.md || true
@@ -59,12 +68,11 @@ jobs:
           python whisper.cpp/models/convert-h5-to-ggml.py hf-model openai-whisper out
           ls -la out
           cmake -S whisper.cpp -B whisper.cpp/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build whisper.cpp/build -j --config Release --target whisper-quantize \
-            || cmake --build whisper.cpp/build -j --config Release --target quantize
-          Q=$(find whisper.cpp/build/bin -type f \( -name whisper-quantize -o -name quantize \) | head -n1)
-          echo "quantize: $Q"
-          "$Q" out/ggml-model.bin model/ggml-quran.bin q5_1
+          cmake --build whisper.cpp/build -j --config Release --target whisper-quantize whisper-cli
+          whisper.cpp/build/bin/whisper-quantize out/ggml-model.bin model/ggml-quran.bin q5_1
           ls -la model
+          # Pastikan model bisa dimuat dan dijalankan oleh whisper.cpp v1.9.1.
+          whisper.cpp/build/bin/whisper-cli -m model/ggml-quran.bin -f whisper.cpp/samples/jfk.wav -l ar -nt
 
       - uses: actions/upload-artifact@v4
         with:

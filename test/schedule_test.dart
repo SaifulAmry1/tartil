@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tartil/core/cycle.dart';
 import 'package:tartil/core/schedule.dart';
+import 'package:tartil/core/stats.dart';
 import 'package:tartil/data/quran_data.dart';
 
 void main() {
@@ -128,5 +129,17 @@ void main() {
     expect(back.days.length, 7);
     expect(back.days[0].done, isTrue);
     expect(back.days[3].units.map((u) => u.key), cycle.days[3].units.map((u) => u.key));
+  });
+
+  test('statistik siklus: selesai dan hari beruntun', () {
+    final surahs = quran.durations(const HafalanRange.juz([30]));
+    final c = Cycle.create(surahs, 10, DateTime(2026, 11, 1));
+    for (final d in [0, 2, 3]) {
+      c.days[d].doneAt = DateTime(2026, 11, 1 + d);
+    }
+    final s = CycleStats.of(c, DateTime(2026, 11, 5));
+    expect(s.today, 4);
+    expect(s.done, 3);
+    expect(s.streak, 2);
   });
 }
