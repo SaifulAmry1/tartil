@@ -1,0 +1,41 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tartil/data/page_layout.dart';
+import 'package:tartil/data/quran_data.dart';
+
+void main() {
+  final quran = QuranData.parse(File('assets/quran/quran.json').readAsStringSync());
+
+  test('halaman 1 (Al-Fatihah): kepala surah lalu 7 ayat', () {
+    final rows = buildPage(quran, 1);
+    expect(rows.first.kind, RowKind.surahHeader);
+    final ends = rows.expand((r) => r.tokens).where((t) => t.isAyahEnd).length;
+    expect(ends, 7);
+  });
+
+  test('halaman 604: tiga surah terakhir dengan basmalah', () {
+    final rows = buildPage(quran, 604);
+    expect(rows.where((r) => r.kind == RowKind.surahHeader).map((r) => r.surah),
+        [112, 113, 114]);
+    expect(rows.where((r) => r.kind == RowKind.bismillah).length, 3);
+  });
+
+  test('setiap kata Al-Qur\'an muncul tepat sekali di seluruh halaman', () {
+    var count = 0;
+    for (var p = 1; p <= quran.pageCount; p++) {
+      for (final r in buildPage(quran, p)) {
+        count += r.tokens.where((t) => !t.isAyahEnd).length;
+        if (r.kind == RowKind.line) {
+          expect(r.lineInPage, inInclusiveRange(0, 14));
+        }
+      }
+    }
+    expect(count, quran.ayahs.fold(0, (a, x) => a + x.tokens.length));
+  });
+
+  test('pembagian 8 blok', () {
+    expect([for (var l = 0; l < 15; l++) blockOfLine(l)],
+        [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7]);
+  });
+}
