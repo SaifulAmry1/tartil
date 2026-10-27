@@ -1,113 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../core/cycle.dart';
 import '../core/schedule.dart';
+import '../core/stats.dart';
 import '../models/profile.dart';
 import '../services/store.dart';
 import '../teks.dart';
-import 'profile_form.dart';
 import 'reader_screen.dart';
 import 'record_screen.dart';
 import 'theme.dart';
+import 'widgets.dart';
 
-/// Jadwal murojaah satu profil: bacaan hari ini dan seluruh siklus.
-class PlanScreen extends StatelessWidget {
-  final AppState app;
-  final Profile profile;
-
-  const PlanScreen({super.key, required this.app, required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: app,
-      builder: (context, _) {
-        final cycle = profile.cycle!;
-        final today = cycle.indexOf(DateTime.now()).clamp(0, cycle.length - 1);
-        return DefaultTabController(
-          length: 2,
-          child: Scaffold(
-            appBar: AppBar(
-              title: Text(profile.name),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => ProfileForm(app: app, profile: profile))),
-                ),
-              ],
-              bottom: const TabBar(
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                indicatorColor: TartilColors.emas,
-                tabs: [Tab(text: Teks.jadwalHariIni), Tab(text: Teks.semuaJadwal)],
-              ),
-            ),
-            body: TabBarView(children: [
-              _Today(app: app, profile: profile, dayIndex: today),
-              _AllDays(app: app, profile: profile, today: today),
-            ]),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _Today extends StatelessWidget {
-  final AppState app;
-  final Profile profile;
-  final int dayIndex;
-
-  const _Today({required this.app, required this.profile, required this.dayIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    final cycle = profile.cycle!;
-    final day = cycle.days[dayIndex];
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Row(children: [
-          const Rub(size: 36),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(Teks.hariKe(dayIndex + 1, cycle.length), style: Theme.of(context).textTheme.titleLarge),
-              Text('${Teks.siklusKe(cycle.number)} · ${Teks.menit(dayLoad(day.units))}'),
-            ]),
-          ),
-        ]),
-        const SizedBox(height: 12),
-        if (day.units.isEmpty) const ListTile(title: Text(Teks.libur)),
-        for (final u in day.units) UnitCard(app: app, profile: profile, unit: u),
-        const SizedBox(height: 16),
-        if (day.done) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: TartilColors.hijauMuda, borderRadius: BorderRadius.circular(12)),
-            child: const Row(children: [
-              Icon(Icons.check_circle, color: TartilColors.hijau),
-              SizedBox(width: 10),
-              Expanded(child: Text(Teks.alhamdulillah)),
-            ]),
-          ),
-          TextButton(
-            onPressed: () => app.setDayDone(profile, dayIndex, false),
-            child: const Text(Teks.batalSelesai),
-          ),
-        ] else
-          FilledButton.icon(
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-            onPressed: () => app.setDayDone(profile, dayIndex, true),
-            icon: const Icon(Icons.check),
-            label: const Text(Teks.tandaiSelesai, style: TextStyle(fontSize: 18)),
-          ),
-      ],
-    );
-  }
-}
-
+/// Kartu satu bacaan: nama surah, rentang ayat, durasi, nilai, aksi.
 class UnitCard extends StatelessWidget {
   final AppState app;
   final Profile profile;
@@ -120,104 +23,186 @@ class UnitCard extends StatelessWidget {
     final s = app.quran.surah(unit.surah);
     final score = profile.scores[unit.surah];
     final range = unit.isWhole ? '${s.ayahCount} ayat' : Teks.ayat(unit.fromAyah, unit.toAyah);
-    return Card(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 14, offset: Offset(0, 4))],
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 8, 6),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        padding: const EdgeInsets.fromLTRB(12, 12, 8, 6),
+        child: Column(children: [
+          Row(children: [
+            Rub(
+              size: 42,
+              color: TartilColors.emas,
+              child: Text('${s.number}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TartilColors.hijau)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Flexible(
+                    child: Text(s.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
+                  ),
+                  if (unit.review) ...[
+                    const SizedBox(width: 6),
+                    _tag(Teks.ulang, const Color(0xFFFFF1E6), TartilColors.oranye),
+                  ],
+                ]),
+                const SizedBox(height: 2),
+                Text('$range · ${Teks.menit(unit.seconds)}',
+                    style: const TextStyle(color: Colors.black54, fontSize: 13)),
+              ]),
+            ),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(s.arabicName,
+                  textDirection: TextDirection.rtl,
+                  style: const TextStyle(fontFamily: 'AmiriQuran', fontSize: 20, color: TartilColors.hijau)),
+              if (score != null)
+                _tag(Teks.nilai(score),
+                    score < Profile.weakThreshold ? const Color(0xFFFFF1E6) : TartilColors.hijauMuda,
+                    score < Profile.weakThreshold ? TartilColors.oranye : TartilColors.hijau),
+            ]),
+          ]),
+          const Divider(height: 18),
           Row(children: [
             Expanded(
-              child: Text('${s.number}. ${s.name}',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-            ),
-            Text(s.arabicName,
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(fontFamily: 'AmiriQuran', fontSize: 20, color: TartilColors.hijau)),
-          ]),
-          Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            Text('$range · ${Teks.menit(unit.seconds)}'),
-            if (unit.review)
-              const Chip(label: Text(Teks.ulang), visualDensity: VisualDensity.compact),
-            if (score != null)
-              Chip(
-                label: Text(Teks.nilai(score)),
-                visualDensity: VisualDensity.compact,
-                backgroundColor: score < Profile.weakThreshold ? const Color(0xFFFFE0CC) : TartilColors.hijauMuda,
+              child: TextButton.icon(
+                icon: const Icon(Icons.auto_stories_outlined, size: 20),
+                label: const Text(Teks.baca),
+                onPressed: () {
+                  final (first, _) = app.quran.pagesOf(unit.surah, unit.fromAyah, unit.toAyah);
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => ReaderScreen(
+                      quran: app.quran,
+                      startPage: first,
+                      title: s.name,
+                      highlight: (surah: unit.surah, from: unit.fromAyah, to: unit.toAyah),
+                    ),
+                  ));
+                },
               ),
-          ]),
-          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-            TextButton.icon(
-              icon: const Icon(Icons.menu_book_outlined),
-              label: const Text(Teks.baca),
-              onPressed: () {
-                final (first, _) = app.quran.pagesOf(unit.surah, unit.fromAyah, unit.toAyah);
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => ReaderScreen(
-                    quran: app.quran,
-                    startPage: first,
-                    title: s.name,
-                    highlight: (surah: unit.surah, from: unit.fromAyah, to: unit.toAyah),
-                  ),
-                ));
-              },
             ),
-            TextButton.icon(
-              icon: const Icon(Icons.mic_none),
-              label: const Text(Teks.rekam),
-              onPressed: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => RecordScreen(
-                  app: app,
-                  profile: profile,
-                  surah: unit.surah,
-                  fromAyah: unit.fromAyah,
-                  toAyah: unit.toAyah,
-                ),
-              )),
+            Container(width: 1, height: 24, color: Colors.black12),
+            Expanded(
+              child: TextButton.icon(
+                icon: const Icon(Icons.mic_none_rounded, size: 20),
+                label: const Text(Teks.rekam),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => RecordScreen(
+                    app: app,
+                    profile: profile,
+                    surah: unit.surah,
+                    fromAyah: unit.fromAyah,
+                    toAyah: unit.toAyah,
+                  ),
+                )),
+              ),
             ),
           ]),
         ]),
       ),
     );
   }
+
+  Widget _tag(String t, Color bg, Color fg) => Container(
+        margin: const EdgeInsets.only(top: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+        child: Text(t, style: TextStyle(fontSize: 11.5, color: fg, fontWeight: FontWeight.w600)),
+      );
 }
 
-class _AllDays extends StatelessWidget {
+/// Seluruh hari dalam siklus, dengan status tiap hari.
+class SchedulePage extends StatelessWidget {
   final AppState app;
   final Profile profile;
-  final int today;
 
-  const _AllDays({required this.app, required this.profile, required this.today});
+  const SchedulePage({super.key, required this.app, required this.profile});
 
   @override
   Widget build(BuildContext context) {
-    final Cycle cycle = profile.cycle!;
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: cycle.length,
-      itemBuilder: (context, i) {
-        final d = cycle.days[i];
-        final names = d.units.map((u) {
-          final n = app.quran.surah(u.surah).name;
-          final part = u.isWhole ? '' : ' (${u.fromAyah}-${u.toAyah})';
-          return '$n$part${u.review ? ' [${Teks.ulang}]' : ''}';
-        }).join(', ');
-        final date = cycle.start.add(Duration(days: i));
-        return Card(
-          color: i == today ? TartilColors.hijauMuda : null,
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: d.done
-                  ? TartilColors.hijau
-                  : d.missed
-                      ? Colors.grey
-                      : TartilColors.emas.withValues(alpha: 0.25),
-              foregroundColor: d.done ? Colors.white : Colors.black87,
-              child: d.done ? const Icon(Icons.check) : Text('${i + 1}'),
-            ),
-            title: Text(d.missed ? Teks.terlewat : (names.isEmpty ? Teks.libur : names)),
-            subtitle: Text('${date.day}/${date.month} · ${Teks.menit(dayLoad(d.units))}'),
+    final cycle = profile.cycle!;
+    final st = CycleStats.of(cycle, DateTime.now());
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(Teks.semuaJadwal),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(36),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text('${Teks.siklusKe(cycle.number)} · ${Teks.hariDari(st.done, cycle.length)}',
+                style: const TextStyle(color: Colors.white70)),
           ),
-        );
-      },
+        ),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+        itemCount: cycle.length,
+        itemBuilder: (context, i) {
+          final d = cycle.days[i];
+          final date = cycle.start.add(Duration(days: i));
+          final isToday = i == st.today;
+          final names = d.units.map((u) {
+            final n = app.quran.surah(u.surah).name;
+            final part = u.isWhole ? '' : ' (${u.fromAyah}-${u.toAyah})';
+            return '$n$part${u.review ? ' (${Teks.ulang.toLowerCase()})' : ''}';
+          }).join(', ');
+          final (Color dot, IconData? icon) = d.done
+              ? (TartilColors.hijau, Icons.check)
+              : d.missed
+                  ? (Colors.grey, Icons.close)
+                  : isToday
+                      ? (TartilColors.emas, null)
+                      : (const Color(0xFFE5DCC5), null);
+          return IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              SizedBox(
+                width: 36,
+                child: Column(children: [
+                  Container(width: 2, height: 14, color: i == 0 ? Colors.transparent : const Color(0xFFE5DCC5)),
+                  CircleAvatar(
+                    radius: 13,
+                    backgroundColor: dot,
+                    child: icon != null
+                        ? Icon(icon, size: 15, color: Colors.white)
+                        : Text('${i + 1}', style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w700)),
+                  ),
+                  Expanded(child: Container(width: 2, color: i == cycle.length - 1 ? Colors.transparent : const Color(0xFFE5DCC5))),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isToday ? TartilColors.hijauMuda : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: isToday ? TartilColors.hijau.withValues(alpha: 0.4) : const Color(0x11000000)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Text('${namaHari(date)}, ${tanggalPendek(date)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      Text(Teks.menit(dayLoad(d.units)), style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text(d.missed ? Teks.terlewat : (names.isEmpty ? Teks.libur : names),
+                        style: TextStyle(color: d.missed ? Colors.black45 : Colors.black87, fontSize: 13.5)),
+                  ]),
+                ),
+              ),
+            ]),
+          );
+        },
+      ),
     );
   }
 }

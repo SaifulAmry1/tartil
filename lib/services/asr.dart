@@ -10,6 +10,9 @@ import 'package:whisper_ggml/whisper_ggml.dart';
 
 class Asr {
   static const _asset = 'assets/model/ggml-quran.bin';
+
+  /// Naikkan setiap kali model di APK berganti, agar salinan lama diganti.
+  static const _modelVersion = 3;
   static String? _modelPath;
 
   /// true jika model ikut dibundel di APK ini.
@@ -26,7 +29,16 @@ class Asr {
   static Future<String> prepare() async {
     if (_modelPath != null) return _modelPath!;
     final dir = await getApplicationSupportDirectory();
-    final file = File('${dir.path}/ggml-quran.bin');
+    final file = File('${dir.path}/ggml-quran-v$_modelVersion.bin');
+    // Hapus salinan model versi lama.
+    for (final f in dir.listSync().whereType<File>()) {
+      final name = f.uri.pathSegments.last;
+      if (name.startsWith('ggml-quran') && f.path != file.path) {
+        try {
+          f.deleteSync();
+        } catch (_) {}
+      }
+    }
     final data = await rootBundle.load(_asset);
     if (!await file.exists() || await file.length() != data.lengthInBytes) {
       await file.writeAsBytes(

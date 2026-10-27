@@ -89,6 +89,38 @@ class Teks {
       'Rekam bacaan satu surah, lalu lihat seberapa tepat aplikasi mengenali bacaan. '
       'Coba dengan suara anak dan dewasa, di tempat tenang dan agak ramai.';
 
+  // Navigasi dan dasbor
+  static const navBeranda = 'Beranda';
+  static const navJadwal = 'Jadwal';
+  static const navMushaf = 'Mushaf';
+  static const navProfil = 'Profil';
+  static const navMurojaah = 'Murojaah';
+  static const salam = 'Assalamu\'alaikum,';
+  static const kemajuanSiklus = 'Kemajuan siklus';
+  static const hariBeruntun = 'Beruntun';
+  static const hariSelesai = 'Selesai';
+  static const hariTerlewat = 'Terlewat';
+  static const rataNilai = 'Rata nilai';
+  static const berikutnya = 'Jadwal berikutnya';
+  static const perluDiulang = 'Perlu diulang';
+  static const besok = 'Besok';
+  static String hariLagi(int n) => '$n hari lagi';
+  static String hariDari(int a, int b) => '$a/$b hari';
+  static const selamatDatang = 'Selamat datang di Tartil';
+  static const selamatDatangKet =
+      'Atur jadwal murojaah hafalan untuk anak maupun dewasa. Buat profil pertama untuk memulai.';
+  static const buatProfil = 'Buat profil';
+  static const profilAktif = 'Profil aktif';
+  static const gantiProfil = 'Ganti profil';
+  static const lainnya = 'Lainnya';
+  static const cariSurah = 'Cari surah';
+  static String infoSurah(int ayat, int hal) => '$ayat ayat · hal. $hal';
+  static const pengaturanProfil = 'Pengaturan profil';
+  static String rentangJuz(List<int> j) => 'Juz ${j.join(', ')}';
+  static String rentangSurah(String a, String b) => '$a sampai $b';
+  static String siklusHari(int n) => 'Siklus $n hari';
+  static String pengingatJam(String jam) => 'Pengingat $jam';
+
   // Notifikasi
   static const kanalNama = 'Pengingat murojaah';
   static const kanalKet = 'Pengingat harian jadwal murojaah';

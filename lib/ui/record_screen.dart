@@ -263,7 +263,7 @@ class _RecordScreenState extends State<RecordScreen> {
                   w.expected,
                   textDirection: TextDirection.rtl,
                   style: TextStyle(
-                    fontFamily: 'AmiriQuran',
+                    fontFamily: 'Hafs',
                     fontSize: 24,
                     height: 1.9,
                     color: switch (w.status) {
