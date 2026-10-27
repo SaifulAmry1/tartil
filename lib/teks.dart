@@ -69,6 +69,7 @@ class Teks {
   static const memproses = 'Memeriksa bacaan...';
   static const izinMikrofon = 'Izin mikrofon dibutuhkan untuk merekam.';
   static const modelTidakAda = 'Model pengenal suara belum ada di versi aplikasi ini.';
+  static const rekamHanyaAndroid = 'Rekam suara hanya tersedia di aplikasi Android. Versi web ini untuk pratinjau tampilan.';
   static const menyiapkanModel = 'Menyiapkan model suara (sekali saja)...';
   static const hasil = 'Hasil pemeriksaan';
   static const kataSalah = 'Kata salah';
