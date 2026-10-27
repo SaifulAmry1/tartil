@@ -98,6 +98,13 @@ jobs:
           name: model
           path: assets/model
 
+      - name: Terima lisensi Android SDK dan pasang NDK
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          # NDK yang diminta plugin whisper_ggml.
+          "$SDKM" --install "ndk;29.0.13113456" > /dev/null
+
       - name: Siapkan kunci tanda tangan
         env:
           KEYSTORE_B64: ${{ secrets.TARTIL_KEYSTORE_B64 }}
