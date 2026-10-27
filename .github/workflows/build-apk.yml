@@ -1,0 +1,147 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: 3.47.8
+  # Model Whisper khusus bacaan Al-Qur'an, dikonversi ke GGML untuk whisper.cpp.
+  HF_MODEL: tarteel-ai/whisper-base-ar-quran
+  MODEL_KEY: ggml-quran-base-q5_1-v2
+
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: model/ggml-quran.bin
+          key: ${{ env.MODEL_KEY }}
+
+      - uses: actions/setup-python@v5
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          python-version: '3.11'
+
+      - name: Unduh model dan alat konversi
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet transformers huggingface_hub numpy
+          # Samakan versi dengan whisper.cpp di paket whisper_ggml.
+          git clone --depth 1 --branch v1.9.1 https://github.com/ggml-org/whisper.cpp \
+            || git clone --depth 1 https://github.com/ggml-org/whisper.cpp
+          git clone --depth 1 https://github.com/openai/whisper openai-whisper
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download, hf_hub_download
+          d = snapshot_download(os.environ['HF_MODEL'], local_dir='hf-model')
+          # Konverter butuh berkas tokenizer; ambil dari model dasar bila tidak ada.
+          for f in ['vocab.json', 'added_tokens.json']:
+              if not os.path.exists(os.path.join(d, f)):
+                  hf_hub_download('openai/whisper-base', f, local_dir=d)
+          PY
+          echo '--- Kartu model (cek lisensi) ---'
+          head -n 40 hf-model/README.md || true
+          ls -la hf-model
+
+      - name: Konversi ke GGML dan kuantisasi
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p out model
+          python whisper.cpp/models/convert-h5-to-ggml.py hf-model openai-whisper out
+          ls -la out
+          cmake -S whisper.cpp -B whisper.cpp/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build whisper.cpp/build -j --config Release --target whisper-quantize \
+            || cmake --build whisper.cpp/build -j --config Release --target quantize
+          Q=$(find whisper.cpp/build/bin -type f \( -name whisper-quantize -o -name quantize \) | head -n1)
+          echo "quantize: $Q"
+          "$Q" out/ggml-model.bin model/ggml-quran.bin q5_1
+          ls -la model
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model
+          path: model/ggml-quran.bin
+          retention-days: 3
+
+  apk:
+    needs: model
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: model
+          path: assets/model
+
+      - name: Terima lisensi Android SDK dan pasang NDK
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          # NDK yang diminta plugin whisper_ggml.
+          "$SDKM" --install "ndk;29.0.13113456" > /dev/null
+
+      - name: Siapkan kunci tanda tangan
+        env:
+          KEYSTORE_B64: ${{ secrets.TARTIL_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.TARTIL_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::Secret TARTIL_KEYSTORE_B64 belum ada, APK memakai kunci debug (pembaruan perlu hapus aplikasi lama)."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > android/app/tartil.jks
+          cat > android/key.properties <<PROPS
+          storeFile=tartil.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=tartil
+          keyPassword=$KEYSTORE_PASSWORD
+          PROPS
+
+      - name: Build APK (arm64)
+        run: |
+          ls -la assets/model
+          flutter build apk --release --target-platform android-arm64
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/tartil-arm64.apk
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tartil-apk
+          path: dist/tartil-arm64.apk
+
+      - name: Terbitkan rilis (unduh dari HP)
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Tartil build ${{ github.run_number }}
+          body: |
+            APK Tartil dari commit ${{ github.sha }}.
+            Unduh `tartil-arm64.apk` di HP Android, lalu pasang.
+          files: dist/tartil-arm64.apk
