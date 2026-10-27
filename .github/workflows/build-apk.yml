@@ -13,7 +13,7 @@ env:
   FLUTTER_VERSION: 3.47.8
   # Model Whisper khusus bacaan Al-Qur'an, dikonversi ke GGML untuk whisper.cpp.
   HF_MODEL: tarteel-ai/whisper-base-ar-quran
-  MODEL_KEY: ggml-quran-base-q5_1-v1
+  MODEL_KEY: ggml-quran-base-q5_1-v2
 
 jobs:
   model:
@@ -35,7 +35,9 @@ jobs:
         run: |
           pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
           pip install --quiet transformers huggingface_hub numpy
-          git clone --depth 1 https://github.com/ggml-org/whisper.cpp
+          # Samakan versi dengan whisper.cpp di paket whisper_ggml.
+          git clone --depth 1 --branch v1.9.1 https://github.com/ggml-org/whisper.cpp \
+            || git clone --depth 1 https://github.com/ggml-org/whisper.cpp
           git clone --depth 1 https://github.com/openai/whisper openai-whisper
           python - <<'PY'
           import os
@@ -57,8 +59,9 @@ jobs:
           python whisper.cpp/models/convert-h5-to-ggml.py hf-model openai-whisper out
           ls -la out
           cmake -S whisper.cpp -B whisper.cpp/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build whisper.cpp/build -j --config Release
-          Q=$(find whisper.cpp/build/bin -name '*quantize*' -type f | head -n1)
+          cmake --build whisper.cpp/build -j --config Release --target whisper-quantize \
+            || cmake --build whisper.cpp/build -j --config Release --target quantize
+          Q=$(find whisper.cpp/build/bin -type f \( -name whisper-quantize -o -name quantize \) | head -n1)
           echo "quantize: $Q"
           "$Q" out/ggml-model.bin model/ggml-quran.bin q5_1
           ls -la model
