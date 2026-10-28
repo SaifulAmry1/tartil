@@ -13,6 +13,10 @@ class Teks {
   static String hariKe(int hari, int total) => 'Hari ke-$hari dari $total';
   static String siklusKe(int n) => 'Siklus ke-$n';
   static const sudahSelesai = 'Selesai hari ini';
+  static const selesai = 'Selesai';
+  static const sudah = 'Sudah';
+  static const tandaiSemua = 'Tandai semua selesai';
+  static String sebagian(int n, int total) => '$n dari $total bacaan selesai';
   static const belumSelesai = 'Belum dibaca';
 
   // Form profil

@@ -193,4 +193,47 @@ void main() {
     c.addWeak(78, surahs, DateTime(2026, 11, 5));
     expect(c.days[5].units.map((u) => u.key).toList(), early);
   });
+
+  test('tandai selesai per surah', () {
+    final surahs = quran.durations(const HafalanRange.juz([30]));
+    final c = Cycle.create(surahs, 7, DateTime(2026, 11, 2));
+    final d = c.days[0];
+    final now = DateTime(2026, 11, 2, 18);
+    d.setUnitDone(d.units.first, true, now);
+    expect(d.partial, isTrue);
+    expect(d.done, isFalse);
+    expect(d.isUnitDone(d.units.first), isTrue);
+    for (final u in d.units) {
+      d.setUnitDone(u, true, now);
+    }
+    expect(d.done, isTrue);
+    expect(d.partial, isFalse);
+    // Batal satu surah: hari kembali sebagian, surah lain tetap tercentang.
+    d.setUnitDone(d.units.last, false, now);
+    expect(d.done, isFalse);
+    expect(d.units.where(d.isUnitDone).length, d.units.length - 1);
+    final back = Cycle.fromJson(c.toJson());
+    expect(back.days[0].doneUnits, d.doneUnits);
+  });
+
+  test('surah yang sudah dicentang tidak dipindah saat hitung ulang', () {
+    final surahs = quran.durations(const HafalanRange.juz([29, 30]));
+    final c = Cycle.create(surahs, 12, DateTime(2026, 11, 2));
+    c.days[0].doneAt = DateTime(2026, 11, 2, 19);
+    // Hari ke-2: baru satu surah; hari ke-7: satu surah dicicil lebih awal.
+    final partMissed = c.days[1].units.first;
+    c.days[1].setUnitDone(partMissed, true, DateTime(2026, 11, 3));
+    final early = c.days[6].units.first;
+    c.days[6].setUnitDone(early, true, DateTime(2026, 11, 3));
+    // Hari ke-2 dan ke-3 terlewat.
+    c.reconcile(DateTime(2026, 11, 5), surahs);
+    expect(c.days[1].missed, isTrue);
+    expect(c.days[6].units.map((u) => u.key), contains(early.key));
+    expect(c.days[6].isUnitDone(early), isTrue);
+    expectFullCoverage(surahs, [
+      c.days[0].units,
+      [partMissed],
+      for (var d = 3; d < 12; d++) c.days[d].units,
+    ]);
+  });
 }

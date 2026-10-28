@@ -97,11 +97,13 @@ class _DayPage extends StatelessWidget {
         ? (future ? Teks.selesaiLebihAwal : Teks.lapSelesai, TartilColors.hijau, Icons.verified)
         : d.missed
             ? (Teks.terlewat, Colors.blueGrey, Icons.event_busy)
-            : future
-                ? (Teks.hariLagi(daysBetween(now, date)), TartilColors.emas, Icons.upcoming_outlined)
-                : past
-                    ? (Teks.lapBelum, Colors.black45, Icons.radio_button_unchecked)
-                    : (Teks.lapHariIni, TartilColors.hijau, Icons.today);
+            : d.partial
+                ? (Teks.sebagian(d.units.where(d.isUnitDone).length, d.units.length), TartilColors.hijau, Icons.timelapse)
+                : future
+                    ? (Teks.hariLagi(daysBetween(now, date)), TartilColors.emas, Icons.upcoming_outlined)
+                    : past
+                        ? (Teks.lapBelum, Colors.black45, Icons.radio_button_unchecked)
+                        : (Teks.lapHariIni, TartilColors.hijau, Icons.today);
 
     return ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
       Container(
@@ -130,7 +132,7 @@ class _DayPage extends StatelessWidget {
       else if (d.units.isEmpty)
         const Card(child: ListTile(title: Text(Teks.libur)))
       else
-        for (final u in d.units) UnitCard(app: app, profile: profile, unit: u),
+        for (final u in d.units) UnitCard(app: app, profile: profile, unit: u, dayIndex: index),
       const SizedBox(height: 8),
       if (!d.missed && d.units.isNotEmpty)
         d.done
