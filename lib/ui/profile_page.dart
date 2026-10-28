@@ -143,11 +143,7 @@ class ProfilePage extends StatelessWidget {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ShareReportScreen(
-                        app: app,
-                        profile: p,
-                        rangeLabel: range,
-                      ),
+                      builder: (_) => ShareReportScreen(app: app, profile: p),
                     ),
                   ),
                 ),

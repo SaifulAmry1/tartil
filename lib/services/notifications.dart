@@ -44,6 +44,7 @@ class Notifications {
 
   /// Satu pengingat pekanan untuk tiap hari murojaah; hari libur dilewati.
   static Future<void> schedule(Profile p, int index) async {
+    if (kIsWeb) return;
     try {
       await cancel(index);
       final now = tz.TZDateTime.now(tz.local);

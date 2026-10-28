@@ -129,11 +129,29 @@ class Teks {
   // Pantauan orang tua
   static const pantauOrtu = 'Pantauan orang tua';
   static const pantauOrtuKet =
-      'Orang tua memindai QR ini atau membuka link yang dikirim untuk melihat kemajuan murojaah. '
-      'Tidak perlu memasang aplikasi atau membuat akun.';
+      'Orang tua cukup memindai QR ini sekali, atau membuka link yang dikirim. Setelah itu kemajuan murojaah, '
+      'termasuk hasil rekaman, terbarui sendiri. Tidak perlu memasang aplikasi atau membuat akun.';
   static const pantauOrtuCatatan =
-      'Laporan berisi keadaan saat dibagikan. Kirim ulang secara berkala, misalnya tiap malam setelah murojaah, '
-      'agar orang tua melihat kemajuan terbaru.';
+      'Data terkirim otomatis setiap ada perubahan selama HP tersambung internet. Tanpa internet, data dikirim '
+      'begitu tersambung lagi. Simpan link ini hanya untuk orang tua.';
+  static const sinkronProses = 'Menyinkronkan...';
+  static const sinkronGagal = 'Belum tersinkron. Periksa internet.';
+  static String sinkronOk(String waktu) => 'Tersinkron $waktu';
+  static const cobaLagi = 'Coba lagi';
+  static const muatUlang = 'Muat ulang';
+  static String lapDiperbarui(String waktu) => 'Diperbarui $waktu';
+  static String lapTanpaAktivitas(int hari) =>
+      'Belum ada aktivitas di aplikasi sejak $hari hari lalu.';
+  static const lapRekaman = 'Hasil rekaman terbaru';
+  static String lapRekamanTerakhir(String surah, int nilai) => 'Rekaman terakhir: $surah, nilai $nilai';
+  static const lapLibur = 'Libur';
+  static const ortuJudul = 'Pantauan murojaah';
+  static String ortuKet(int n) => n == 0 ? 'Belum ada anak yang dipantau' : '$n anak dipantau';
+  static const ortuKosong = 'Pindai QR di aplikasi Tartil milik anak untuk mulai memantau.';
+  static const ortuBelumAda = 'Data belum tersedia. Pastikan HP anak tersambung internet.';
+  static const ortuCatatan =
+      'Halaman ini memperbarui sendiri tiap menit. Simpan sebagai bookmark atau tambahkan ke layar utama. '
+      'Untuk memantau anak lain, pindai QR dari HP anak tersebut.';
   static const kirimLaporan = 'Kirim laporan (WhatsApp, dll.)';
   static const salinLink = 'Salin link';
   static const linkDisalin = 'Link laporan disalin';

@@ -1,4 +1,5 @@
 // Penyimpanan lokal semua profil (tanpa login, tanpa server).
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -6,9 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/cycle.dart';
+import '../core/report.dart';
 import '../data/quran_data.dart';
 import '../models/profile.dart';
+import '../models/recording_log.dart';
+import '../teks.dart';
 import 'notifications.dart';
+import 'sync.dart';
 
 class AppState extends ChangeNotifier {
   static const _key = 'profil_v1';
@@ -54,11 +59,63 @@ class AppState extends ChangeNotifier {
     await _prefs.setString(
         _key, jsonEncode([for (final p in profiles) p.toJson()]));
     notifyListeners();
+    _syncSoon();
+  }
+
+  String rangeLabel(Profile p) {
+    final r = p.range;
+    return r.isJuz
+        ? Teks.rentangJuz(r.juz)
+        : Teks.rentangSurah(quran.surah(r.fromSurah!).name, quran.surah(r.toSurah!).name);
+  }
+
+  // --- Sinkron pantauan orang tua ---
+
+  /// Waktu sinkron berhasil terakhir per profil (sesi ini).
+  final Map<String, DateTime> lastSync = {};
+
+  /// Profil yang sinkron terakhirnya gagal (mis. tanpa internet).
+  final Set<String> syncFailed = {};
+  Timer? _syncTimer;
+
+  void _syncSoon() {
+    if (!profiles.any((p) => p.syncId != null)) return;
+    _syncTimer?.cancel();
+    _syncTimer = Timer(const Duration(seconds: 2), syncAll);
+  }
+
+  Future<void> syncAll() async {
+    for (final p in [...profiles]) {
+      if (p.syncId != null && p.cycle != null) await syncProfile(p);
+    }
+  }
+
+  Future<bool> syncProfile(Profile p) async {
+    final ok = await Sync.push(p.syncId!, Laporan.of(p, rangeLabel(p), DateTime.now()));
+    if (ok) {
+      lastSync[p.id] = DateTime.now();
+      syncFailed.remove(p.id);
+    } else {
+      syncFailed.add(p.id);
+    }
+    notifyListeners();
+    return ok;
+  }
+
+  /// Aktifkan pantauan orang tua untuk profil ini (sekali saja).
+  Future<void> enableSync(Profile p) async {
+    if (p.syncId != null) return;
+    p.syncId = Sync.newId();
+    await _prefs.setString(
+        _key, jsonEncode([for (final x in profiles) x.toJson()]));
+    notifyListeners();
+    await syncProfile(p);
   }
 
   /// Pastikan jadwal tiap profil sesuai tanggal hari ini (hari terlewat,
   /// siklus baru).
   void refreshAll() {
+    _syncSoon();
     var changed = false;
     for (final p in profiles) {
       changed |= _refresh(p);
@@ -95,6 +152,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> remove(Profile p) async {
     await Notifications.cancel(profiles.indexOf(p));
+    if (p.syncId != null) unawaited(Sync.remove(p.syncId!));
     profiles.remove(p);
     await _save();
     // Indeks notifikasi bergeser; jadwalkan ulang semuanya.
@@ -106,7 +164,13 @@ class AppState extends ChangeNotifier {
     await _save();
   }
 
-  Future<void> saveScore(Profile p, int surah, int score) async {
+  Future<void> saveScore(Profile p, int surah, int score, {RecordingLog? log}) async {
+    if (log != null) {
+      p.recordings.insert(0, log);
+      if (p.recordings.length > Profile.maxRecordings) {
+        p.recordings.removeRange(Profile.maxRecordings, p.recordings.length);
+      }
+    }
     final wasWeak = p.weakSurahs.contains(surah);
     p.scores[surah] = score;
     if (!wasWeak && score < Profile.weakThreshold && p.cycle != null) {

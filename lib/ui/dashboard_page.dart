@@ -49,7 +49,7 @@ class DashboardPage extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.qr_code_2, color: Colors.white),
                     onPressed: () => Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => ShareReportScreen(app: app, profile: profile, rangeLabel: _rangeLabel()),
+                      builder: (_) => ShareReportScreen(app: app, profile: profile),
                     )),
                   ),
                 ]),
