@@ -54,6 +54,12 @@ class _RecordScreenState extends State<RecordScreen> {
   Duration _recLen = Duration.zero;
   Duration _procLen = Duration.zero;
   Timer? _ticker;
+  // Kemajuan pemeriksaan (0-100) dan penanda agar hasil yang dibatalkan
+  // diabaikan.
+  int _progress = 0;
+  int _run = 0;
+  DateTime? _procStart;
+  DateTime _lastProgress = DateTime.now();
 
   QuranData get quran => widget.app.quran;
   bool get _testMode => widget.surah == null;
@@ -111,33 +117,70 @@ class _RecordScreenState extends State<RecordScreen> {
       });
       return;
     }
-    final t0 = DateTime.now();
+    final run = ++_run;
+    final t0 = _procStart = _lastProgress = DateTime.now();
+    _progress = 0;
+    // Tampilkan waktu berjalan, dan hentikan bila tidak ada kemajuan
+    // terlalu lama (HP sangat lambat atau pemeriksaan macet).
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || run != _run) return;
+      if (DateTime.now().difference(_lastProgress) > _stallLimit) {
+        _cancel(Teks.periksaMacet);
+      } else {
+        setState(() {});
+      }
+    });
     try {
       final text = await Asr.transcribe(
         path,
         prompt: _prompt ? _expected.join(' ') : null,
+        onProgress: (p) {
+          if (run != _run || p <= _progress) return;
+          _lastProgress = DateTime.now();
+          if (mounted) setState(() => _progress = p);
+        },
       );
+      if (run != _run) return;
+      _ticker?.cancel();
       _procLen = DateTime.now().difference(t0);
       final result = compareRecitation(_expected, splitWords(text));
       if (widget.profile != null) {
         await widget.app.saveScore(widget.profile!, _surah, result.score,
             log: RecordingLog.of(result, _surah, _from, _to, DateTime.now()));
       }
+      if (!mounted) return;
       setState(() {
         _heard = text;
         _result = result;
         _phase = _Phase.hasil;
       });
     } catch (e) {
+      if (run != _run || !mounted) return;
+      _ticker?.cancel();
       setState(() {
         _phase = _Phase.siap;
         _error = '$e';
       });
     } finally {
+      // Berkas dihapus setelah proses native selesai, meski sudah dibatalkan.
       try {
         await File(path).delete();
+        await File('$path.wav').delete();
       } catch (_) {}
     }
+  }
+
+  /// Batas tanpa kemajuan. Model memberi kabar tiap potongan 30 detik
+  /// rekaman, jadi jeda lebih dari ini berarti macet.
+  static const _stallLimit = Duration(minutes: 3);
+
+  void _cancel([String? reason]) {
+    _run++;
+    _ticker?.cancel();
+    setState(() {
+      _phase = _Phase.siap;
+      _error = reason;
+    });
   }
 
   @override
@@ -201,7 +244,7 @@ class _RecordScreenState extends State<RecordScreen> {
         );
       case _Phase.merekam:
         return Column(children: [
-          Text('${Teks.merekam} ${_recLen.inMinutes}:${(_recLen.inSeconds % 60).toString().padLeft(2, '0')}',
+          Text('${Teks.merekam} ${_mmss(_recLen)}',
               style: const TextStyle(fontSize: 18, color: TartilColors.merah)),
           const SizedBox(height: 8),
           FilledButton.icon(
@@ -212,13 +255,30 @@ class _RecordScreenState extends State<RecordScreen> {
           ),
         ]);
       case _Phase.memproses:
-        return const Column(children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 8),
-          Text(Teks.memproses),
+        final spent = DateTime.now().difference(_procStart ?? DateTime.now());
+        return Column(children: [
+          LinearProgressIndicator(
+            value: _progress == 0 ? null : _progress / 100,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 10),
+          Text('${Teks.memproses} ${_progress > 0 ? '$_progress% · ' : ''}${_mmss(spent)}',
+              style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(Teks.memprosesKet(_mmss(_recLen)),
+              textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54, fontSize: 12.5)),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => _cancel(),
+            icon: const Icon(Icons.close),
+            label: const Text(Teks.batalPeriksa),
+          ),
         ]);
     }
   }
+
+  String _mmss(Duration d) => '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
   Widget _notice(String text, Color color) => Container(
         margin: const EdgeInsets.only(top: 12),

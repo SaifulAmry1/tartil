@@ -153,6 +153,17 @@ class Laporan {
   /// Link pantauan yang selalu terbaru (data diambil dari sinkron).
   static String liveUrl(String syncId) => '$baseUrl?p=$syncId';
 
+  /// Ambil kunci pantauan dari isi QR atau link yang ditempel. Menerima
+  /// link `...?p=<kunci>` maupun kuncinya saja. Null bila bukan milik Tartil.
+  static String? idFromLink(String text) {
+    final t = text.trim();
+    final id = RegExp(r'^[A-Za-z0-9_-]{16,64}$');
+    if (id.hasMatch(t)) return t;
+    final uri = Uri.tryParse(t);
+    final p = uri?.queryParameters['p'];
+    return p != null && id.hasMatch(p) ? p : null;
+  }
+
   static Laporan? decode(String data) {
     try {
       final padded = data.padRight((data.length + 3) ~/ 4 * 4, '=');
