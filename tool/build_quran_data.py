@@ -103,6 +103,8 @@ def main(xml_path, tajweed_path, layout_path, out_path):
         lines.append([p + 1, li - first_line])
 
     suras = [[s['name_ar'], s['ayah_count']] for s in q['surahs']]
+    # Sumber menulis الشورى dengan ya (ي); di mushaf ditulis alif maqsurah (ى).
+    suras[41][0] = suras[41][0].replace('\u0631\u064a', '\u0631\u0649')
     out_ayahs = []
     dropped = mapped_words = unmapped_words = 0
     bismillah = None

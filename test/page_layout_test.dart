@@ -38,4 +38,24 @@ void main() {
     expect([for (var l = 0; l < 15; l++) blockOfLine(l)],
         [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7]);
   });
+
+  test('baris pendek penutup surah di tengah, baris lain rata kanan-kiri', () {
+    List<bool> centered(int page) => [
+          for (final r in buildPage(quran, page))
+            if (r.kind == RowKind.line) r.centered,
+        ];
+    // Halaman 603: An-Nasr dan Al-Masad ditutup baris pendek.
+    final p603 = buildPage(quran, 603).where((r) => r.kind == RowKind.line).toList();
+    final masadLast = p603.lastWhere((r) => r.surah == 111);
+    expect(masadLast.centered, isTrue);
+    expect(p603.where((r) => r.surah == 111 && r != masadLast).every((r) => !r.centered), isTrue);
+    expect(centered(1).every((c) => c), isTrue);
+    expect(centered(50).any((c) => c), isFalse);
+    // Di seluruh mushaf hanya sedikit baris di luar halaman 1-2 yang di tengah.
+    var count = 0;
+    for (var p = 3; p <= 604; p++) {
+      count += centered(p).where((c) => c).length;
+    }
+    expect(count, 10);
+  });
 }

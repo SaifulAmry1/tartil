@@ -189,8 +189,8 @@ class _MushafPage extends StatelessWidget {
       case RowKind.line:
         final bg = blok ? TartilColors.blok[blockOfLine(r.lineInPage)] : Colors.transparent;
         // Baris penuh dirata kanan-kiri seperti mushaf; baris pendek
-        // (akhir surah) di tengah. Baris yang terlalu panjang diperkecil.
-        final full = r.tokens.length >= 5;
+        // penutup surah di tengah. Baris yang terlalu panjang diperkecil.
+        final full = !r.centered;
         return Container(
           color: bg,
           padding: const EdgeInsets.symmetric(horizontal: 4),
