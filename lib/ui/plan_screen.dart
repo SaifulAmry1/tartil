@@ -17,17 +17,25 @@ class UnitCard extends StatelessWidget {
   final Profile profile;
   final Unit unit;
 
-  const UnitCard({super.key, required this.app, required this.profile, required this.unit});
+  /// Hari siklus tempat bacaan ini; bila diisi, kartu punya tombol
+  /// tandai selesai per surah.
+  final int? dayIndex;
+
+  const UnitCard({super.key, required this.app, required this.profile, required this.unit, this.dayIndex});
 
   @override
   Widget build(BuildContext context) {
     final s = app.quran.surah(unit.surah);
     final score = profile.scores[unit.surah];
     final range = unit.isWhole ? '${s.ayahCount} ayat' : Teks.ayat(unit.fromAyah, unit.toAyah);
+    final day = dayIndex == null ? null : profile.cycle!.days[dayIndex!];
+    final canTick = day != null && !day.missed;
+    final done = day != null && day.isUnitDone(unit);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: done ? const Color(0xFFEFF7F3) : Colors.white,
+        border: done ? Border.all(color: TartilColors.hijau.withValues(alpha: 0.35)) : null,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 14, offset: Offset(0, 4))],
       ),
@@ -37,9 +45,11 @@ class UnitCard extends StatelessWidget {
           Row(children: [
             Rub(
               size: 42,
-              color: TartilColors.emas,
-              child: Text('${s.number}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TartilColors.hijau)),
+              color: done ? TartilColors.hijau : TartilColors.emas,
+              child: done
+                  ? const Icon(Icons.check, size: 18, color: TartilColors.hijau)
+                  : Text('${s.number}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TartilColors.hijau)),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -105,6 +115,17 @@ class UnitCard extends StatelessWidget {
                 )),
               ),
             ),
+            if (canTick) ...[
+              Container(width: 1, height: 24, color: Colors.black12),
+              Expanded(
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: done ? TartilColors.hijau : Colors.black54),
+                  icon: Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, size: 20),
+                  label: Text(done ? Teks.sudah : Teks.selesai),
+                  onPressed: () => app.setUnitDone(profile, dayIndex!, unit, !done),
+                ),
+              ),
+            ],
           ]),
         ]),
       ),
@@ -159,6 +180,8 @@ class SchedulePage extends StatelessWidget {
               ? (TartilColors.hijau, Icons.check)
               : d.missed
                   ? (Colors.grey, Icons.close)
+                  : d.partial
+                      ? (const Color(0xFF7FBF9F), Icons.timelapse)
                   : isToday
                       ? (TartilColors.emas, null)
                       : (const Color(0xFFE5DCC5), null);

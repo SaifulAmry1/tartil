@@ -14,20 +14,51 @@ class DayPlan {
   /// Hari ini terlewat dan bacaannya sudah dipindah ke hari berikutnya.
   bool missed;
 
-  DayPlan(this.units, {this.doneAt, this.missed = false});
+  /// Bacaan (Unit.key) yang sudah ditandai selesai satu per satu, sebelum
+  /// seluruh hari selesai.
+  Set<String> doneUnits;
+
+  DayPlan(this.units, {this.doneAt, this.missed = false, Set<String>? doneUnits})
+      : doneUnits = doneUnits ?? {};
 
   bool get done => doneAt != null;
+
+  bool isUnitDone(Unit u) => done || doneUnits.contains(u.key);
+
+  /// Sebagian bacaan sudah selesai, tetapi belum semuanya.
+  bool get partial => !done && units.any((u) => doneUnits.contains(u.key));
+
+  /// Tandai satu bacaan. Hari menjadi selesai bila semua bacaannya selesai,
+  /// dan batal selesai bila salah satunya dibatalkan.
+  void setUnitDone(Unit u, bool value, DateTime now) {
+    if (done) {
+      doneUnits = {for (final x in units) x.key};
+      doneAt = null;
+    }
+    value ? doneUnits.add(u.key) : doneUnits.remove(u.key);
+    if (units.isNotEmpty && units.every((x) => doneUnits.contains(x.key))) {
+      doneAt = now;
+      doneUnits = {};
+    }
+  }
+
+  void setDone(bool value, DateTime now) {
+    doneAt = value ? now : null;
+    doneUnits = {};
+  }
 
   Map<String, dynamic> toJson() => {
         'u': [for (final u in units) u.toJson()],
         if (doneAt != null) 'd': doneAt!.toIso8601String(),
         if (missed) 'm': true,
+        if (doneUnits.isNotEmpty) 'k': doneUnits.toList(),
       };
 
   factory DayPlan.fromJson(Map<String, dynamic> j) => DayPlan(
         [for (final u in j['u'] as List) Unit.fromJson(u as Map<String, dynamic>)],
         doneAt: j['d'] == null ? null : DateTime.parse(j['d'] as String),
         missed: j['m'] == true,
+        doneUnits: {for (final k in j['k'] as List? ?? const []) k as String},
       );
 }
 
@@ -128,9 +159,11 @@ class Cycle {
     final from = todayDone ? idx + 1 : idx;
     // Hari yang sudah selesai lebih awal tidak diubah.
     final open = [for (var d = from; d < days.length; d++) if (!days[d].done) d];
+    // Bacaan yang sudah ditandai selesai tidak dipindah lagi.
+    bool moves(DayPlan d, Unit u) => !u.review && !d.doneUnits.contains(u.key);
     final pending = <Unit>[
-      for (final d in missedIdx) ...days[d].units.where((u) => !u.review),
-      for (final d in open) ...days[d].units.where((u) => !u.review),
+      for (final d in missedIdx) ...days[d].units.where((u) => moves(days[d], u)),
+      for (final d in open) ...days[d].units.where((u) => moves(days[d], u)),
     ];
     for (final d in missedIdx) {
       days[d].missed = true;
@@ -143,7 +176,10 @@ class Cycle {
     final plan = balance(pending, open.length);
     addReviews(plan, _weakUnits(surahs, weakSurahs));
     for (var k = 0; k < open.length; k++) {
-      days[open[k]] = DayPlan(plan[k]);
+      final old = days[open[k]];
+      final kept = [for (final u in old.units) if (old.doneUnits.contains(u.key)) u];
+      days[open[k]] = DayPlan([...kept, ...plan[k]]..sort((a, b) => a.order.compareTo(b.order)),
+          doneUnits: {for (final u in kept) u.key});
     }
     return this;
   }

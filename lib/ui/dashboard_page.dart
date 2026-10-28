@@ -134,7 +134,7 @@ class DashboardPage extends StatelessWidget {
           SectionTitle(off ? '${Teks.liburBesok} · ${tanggalHari(cycle.dateOf(st.today))}' : Teks.jadwalHariIni,
               trailing: Text(Teks.menit(dayLoad(day.units)), style: const TextStyle(color: Colors.black54))),
           if (day.units.isEmpty) const Card(child: ListTile(title: Text(Teks.libur))),
-          for (final u in day.units) UnitCard(app: app, profile: profile, unit: u),
+          for (final u in day.units) UnitCard(app: app, profile: profile, unit: u, dayIndex: st.today),
           if (!off) ...[
             const SizedBox(height: 8),
             _doneButton(context, st.today, day.done),
@@ -233,8 +233,17 @@ class DashboardPage extends StatelessWidget {
       ),
       onPressed: () => app.setDayDone(profile, index, true),
       icon: const Icon(Icons.check_circle_outline),
-      label: const Text(Teks.tandaiSelesai, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      label: Text(_partialLabel(index) ?? Teks.tandaiSelesai,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
     );
+  }
+
+  /// "2 dari 4 bacaan selesai" bila sebagian surah sudah dicentang.
+  String? _partialLabel(int index) {
+    final d = profile.cycle!.days[index];
+    if (!d.partial) return null;
+    final n = d.units.where(d.isUnitDone).length;
+    return '${Teks.tandaiSemua} ($n/${d.units.length})';
   }
 }
 

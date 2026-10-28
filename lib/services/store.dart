@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/cycle.dart';
 import '../core/report.dart';
+import '../core/schedule.dart';
 import '../data/quran_data.dart';
 import '../models/profile.dart';
 import '../models/recording_log.dart';
@@ -160,7 +161,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setDayDone(Profile p, int dayIndex, bool done) async {
-    p.cycle!.days[dayIndex].doneAt = done ? DateTime.now() : null;
+    p.cycle!.days[dayIndex].setDone(done, DateTime.now());
+    await _save();
+  }
+
+  Future<void> setUnitDone(Profile p, int dayIndex, Unit unit, bool done) async {
+    p.cycle!.days[dayIndex].setUnitDone(unit, done, DateTime.now());
     await _save();
   }
 
