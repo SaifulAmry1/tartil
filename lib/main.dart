@@ -12,9 +12,13 @@ import 'ui/theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Versi web dibuka dari link laporan orang tua: tampilkan laporan saja.
-  final report = kIsWeb ? Uri.base.queryParameters['r'] : null;
-  if (report != null) {
-    runApp(ReportApp(laporan: Laporan.decode(report), builder: _phoneFrame));
+  final q = kIsWeb ? Uri.base.queryParameters : const <String, String>{};
+  if (q['p'] != null || q['ortu'] != null) {
+    runApp(ReportApp(syncId: q['p'], builder: _phoneFrame));
+    return;
+  }
+  if (q['r'] != null) {
+    runApp(ReportApp(laporan: Laporan.decode(q['r']!), builder: _phoneFrame));
     return;
   }
   final app = await AppState.load();

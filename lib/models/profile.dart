@@ -1,5 +1,6 @@
 import '../core/cycle.dart';
 import '../data/quran_data.dart';
+import 'recording_log.dart';
 
 class Profile {
   final String id;
@@ -16,6 +17,15 @@ class Profile {
   /// Nilai kelancaran terakhir per surah (0..100).
   Map<int, int> scores;
 
+  /// Rekaman terbaru lebih dulu, paling banyak [maxRecordings].
+  List<RecordingLog> recordings;
+
+  /// Kunci acak dokumen sinkron untuk pantauan orang tua; null bila
+  /// belum pernah dibagikan.
+  String? syncId;
+
+  static const maxRecordings = 20;
+
   Profile({
     required this.id,
     required this.name,
@@ -26,8 +36,11 @@ class Profile {
     Set<int>? offDays,
     this.cycle,
     Map<int, int>? scores,
+    List<RecordingLog>? recordings,
+    this.syncId,
   })  : offDays = offDays ?? {defaultOffDay},
-        scores = scores ?? {};
+        scores = scores ?? {},
+        recordings = recordings ?? [];
 
   static const defaultOffDay = DateTime.sunday;
 
@@ -47,6 +60,8 @@ class Profile {
         'libur': offDays.toList()..sort(),
         if (cycle != null) 'siklus': cycle!.toJson(),
         'nilai': {for (final e in scores.entries) '${e.key}': e.value},
+        if (recordings.isNotEmpty) 'rekaman': [for (final r in recordings) r.toJson()],
+        if (syncId != null) 'sinkron': syncId,
       };
 
   factory Profile.fromJson(Map<String, dynamic> j) {
@@ -68,6 +83,11 @@ class Profile {
           for (final e in (j['nilai'] as Map? ?? {}).entries)
             int.parse(e.key as String): e.value as int,
         },
+        recordings: [
+          for (final r in j['rekaman'] as List? ?? const [])
+            RecordingLog.fromJson(r as Map<String, dynamic>),
+        ],
+        syncId: j['sinkron'] as String?,
       );
   }
 }

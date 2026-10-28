@@ -1,8 +1,9 @@
-// Laporan kemajuan untuk orang tua. Seluruh isinya dikodekan ke dalam link
-// (tanpa server): orang tua memindai QR dan laporan dibuka di versi web.
+// Laporan kemajuan untuk orang tua. Dikirim otomatis ke Firestore (link
+// ?p=<kunci>), atau seluruh isinya dikodekan ke dalam link (?r=<data>).
 import 'dart:convert';
 
 import '../models/profile.dart';
+import '../models/recording_log.dart';
 import 'cycle.dart';
 import 'stats.dart';
 
@@ -25,6 +26,9 @@ class Laporan {
   /// Nomor surah per hari siklus; null bila dipangkas karena terlalu panjang.
   final List<List<int>>? surahs;
   final Map<int, int> scores;
+
+  /// Rekaman terbaru lebih dulu.
+  final List<RecordingLog> recordings;
   final DateTime generated;
 
   Laporan({
@@ -36,6 +40,7 @@ class Laporan {
     required this.days,
     required this.surahs,
     required this.scores,
+    this.recordings = const [],
     required this.generated,
   });
 
@@ -59,6 +64,7 @@ class Laporan {
         for (final d in c.days) [for (final s in d.units.map((u) => u.surah).toSet()) s],
       ],
       scores: Map.of(p.scores),
+      recordings: List.of(p.recordings),
       generated: now,
     );
   }
@@ -91,7 +97,9 @@ class Laporan {
   List<int> get weak =>
       (scores.entries.where((e) => e.value < Profile.weakThreshold).map((e) => e.key).toList()..sort());
 
-  Map<String, dynamic> _json({required bool withSurahs}) => {
+  /// Rekaman yang ikut dikirim. Sinkron membawa semuanya; link QR hanya
+  /// sebagian agar tetap mudah dipindai.
+  Map<String, dynamic> toJson({bool withSurahs = true, int maxRecordings = Profile.maxRecordings}) => {
         'v': 1,
         'n': name,
         'r': range,
@@ -101,39 +109,54 @@ class Laporan {
         'd': days.map((s) => s.name[0]).join(),
         if (withSurahs && surahs != null) 'u': surahs,
         'x': {for (final e in scores.entries) '${e.key}': e.value},
+        if (recordings.isNotEmpty && maxRecordings > 0)
+          'h': [for (final r in recordings.take(maxRecordings)) r.toJson()],
         'g': generated.millisecondsSinceEpoch ~/ 1000,
       };
 
+  factory Laporan.fromJson(Map<String, dynamic> j) {
+    final s = (j['s'] as String).split('-').map(int.parse).toList();
+    return Laporan(
+      name: j['n'] as String,
+      range: j['r'] as String,
+      cycleNumber: j['c'] as int,
+      start: DateTime.utc(s[0], s[1], s[2]),
+      offDays: {for (final x in j['l'] as List) x as int},
+      days: [
+        for (final ch in (j['d'] as String).split(''))
+          DayStatus.values.firstWhere((v) => v.name[0] == ch),
+      ],
+      surahs: j['u'] == null
+          ? null
+          : [for (final d in j['u'] as List) [for (final x in d as List) x as int]],
+      scores: {for (final e in (j['x'] as Map).entries) int.parse(e.key as String): e.value as int},
+      recordings: [
+        for (final r in j['h'] as List? ?? const []) RecordingLog.fromJson(r as Map<String, dynamic>),
+      ],
+      generated: DateTime.fromMillisecondsSinceEpoch((j['g'] as int) * 1000),
+    );
+  }
+
+  /// Data untuk link QR tanpa sinkron, dipangkas bertahap bila terlalu panjang.
   String encode() {
-    String enc(bool withSurahs) =>
-        base64Url.encode(utf8.encode(jsonEncode(_json(withSurahs: withSurahs)))).replaceAll('=', '');
-    final full = enc(true);
-    return full.length <= maxData ? full : enc(false);
+    String enc(bool withSurahs, int rec) =>
+        base64Url.encode(utf8.encode(jsonEncode(toJson(withSurahs: withSurahs, maxRecordings: rec)))).replaceAll('=', '');
+    for (final (withSurahs, rec) in [(true, 3), (true, 1), (true, 0), (false, 0)]) {
+      final e = enc(withSurahs, rec);
+      if (e.length <= maxData) return e;
+    }
+    return enc(false, 0);
   }
 
   String get url => '$baseUrl?r=${encode()}';
 
+  /// Link pantauan yang selalu terbaru (data diambil dari sinkron).
+  static String liveUrl(String syncId) => '$baseUrl?p=$syncId';
+
   static Laporan? decode(String data) {
     try {
       final padded = data.padRight((data.length + 3) ~/ 4 * 4, '=');
-      final j = jsonDecode(utf8.decode(base64Url.decode(padded))) as Map<String, dynamic>;
-      final s = (j['s'] as String).split('-').map(int.parse).toList();
-      return Laporan(
-        name: j['n'] as String,
-        range: j['r'] as String,
-        cycleNumber: j['c'] as int,
-        start: DateTime.utc(s[0], s[1], s[2]),
-        offDays: {for (final x in j['l'] as List) x as int},
-        days: [
-          for (final ch in (j['d'] as String).split(''))
-            DayStatus.values.firstWhere((v) => v.name[0] == ch),
-        ],
-        surahs: j['u'] == null
-            ? null
-            : [for (final d in j['u'] as List) [for (final x in d as List) x as int]],
-        scores: {for (final e in (j['x'] as Map).entries) int.parse(e.key as String): e.value as int},
-        generated: DateTime.fromMillisecondsSinceEpoch((j['g'] as int) * 1000),
-      );
+      return Laporan.fromJson(jsonDecode(utf8.decode(base64Url.decode(padded))) as Map<String, dynamic>);
     } catch (_) {
       return null;
     }

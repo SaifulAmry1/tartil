@@ -9,6 +9,7 @@ import 'package:record/record.dart';
 import '../core/recitation_check.dart';
 import '../data/quran_data.dart';
 import '../models/profile.dart';
+import '../models/recording_log.dart';
 import '../services/asr.dart';
 import '../services/store.dart';
 import '../teks.dart';
@@ -119,7 +120,8 @@ class _RecordScreenState extends State<RecordScreen> {
       _procLen = DateTime.now().difference(t0);
       final result = compareRecitation(_expected, splitWords(text));
       if (widget.profile != null) {
-        await widget.app.saveScore(widget.profile!, _surah, result.score);
+        await widget.app.saveScore(widget.profile!, _surah, result.score,
+            log: RecordingLog.of(result, _surah, _from, _to, DateTime.now()));
       }
       setState(() {
         _heard = text;
