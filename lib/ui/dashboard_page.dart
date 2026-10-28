@@ -46,6 +46,14 @@ class DashboardPage extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
                   const Spacer(),
                   IconButton(
+                    tooltip: Teks.pantauAnak,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.family_restroom, color: Colors.white),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => const ParentHome(inApp: true),
+                    )),
+                  ),
+                  IconButton(
                     tooltip: Teks.pantauOrtu,
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.qr_code_2, color: Colors.white),
@@ -159,6 +167,8 @@ class DashboardPage extends StatelessWidget {
               ],
             ),
           ),
+          const SectionTitle(Teks.pantauAnakJudul),
+          const ChildrenCard(),
         ]),
       ),
     ]);

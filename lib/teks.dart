@@ -170,6 +170,9 @@ class Teks {
   static String ortuKet(int n) => n == 0 ? 'Belum ada anak yang dipantau' : '$n anak dipantau';
   static const ortuKosong = 'Pindai QR di aplikasi Tartil milik anak untuk mulai memantau.';
   static const pantauAnak = 'Pantau anak (orang tua)';
+  static const memuat = 'Memuat...';
+  static const pantauAnakJudul = 'Pantau anak';
+  static const pantauAnakMulai = 'Tambah anak untuk dipantau';
   static const pantauAnakSub = 'Pindai QR dari HP anak, kemajuannya terbarui otomatis';
   static const sayaOrtu = 'Saya orang tua, pantau anak';
   static const tambahAnak = 'Tambah anak';

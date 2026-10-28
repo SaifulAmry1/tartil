@@ -719,6 +719,105 @@ class _ParentHomeState extends State<ParentHome> {
   }
 }
 
+/// Kartu "Pantau anak" di Beranda: anak yang dipantau dari HP ini beserta
+/// progres singkatnya. Klik nama untuk laporan lengkap.
+class ChildrenCard extends StatefulWidget {
+  const ChildrenCard({super.key});
+
+  @override
+  State<ChildrenCard> createState() => _ChildrenCardState();
+}
+
+class _ChildrenCardState extends State<ChildrenCard> {
+  List<String> _ids = [];
+  final Map<String, Laporan?> _data = {};
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _ids = prefs.getStringList(_ParentHomeState._key) ?? [];
+    } catch (_) {}
+    final results = await Future.wait(_ids.map(Sync.fetch));
+    if (!mounted) return;
+    setState(() {
+      for (var i = 0; i < _ids.length; i++) {
+        _data[_ids[i]] = results[i] ?? _data[_ids[i]];
+      }
+    });
+  }
+
+  Future<void> _manage() async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentHome(inApp: true)));
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Column(children: [
+        for (final id in _ids) _row(id),
+        ListTile(
+          leading: const CircleAvatar(
+            radius: 18,
+            backgroundColor: TartilColors.hijauMuda,
+            child: Icon(Icons.person_add_alt_1, color: TartilColors.hijau, size: 20),
+          ),
+          title: Text(_ids.isEmpty ? Teks.pantauAnakMulai : Teks.tambahAnak,
+              style: const TextStyle(color: TartilColors.hijau, fontWeight: FontWeight.w600)),
+          subtitle: _ids.isEmpty ? const Text(Teks.pantauAnakSub) : null,
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _manage,
+        ),
+      ]),
+    );
+  }
+
+  Widget _row(String id) {
+    final l = _data[id];
+    if (l == null) {
+      return const ListTile(
+        leading: SizedBox(width: 36, height: 36, child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2))),
+        title: Text(Teks.memuat),
+      );
+    }
+    final st = l.stats;
+    final (txt, col) = l.offToday
+        ? (Teks.lapLibur, TartilColors.oranye)
+        : l.today == DayStatus.selesai
+            ? (Teks.lapSelesai, TartilColors.hijau)
+            : (Teks.lapBelum, Colors.redAccent);
+    return ListTile(
+      leading: ProgressRing(
+        value: st.done / l.length,
+        size: 40,
+        track: const Color(0x22000000),
+        child: Text('${(st.done * 100 / l.length).round()}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+      ),
+      title: Text(l.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Text('${Teks.hariKe(st.today + 1, l.length)} · ${Teks.lapHariIni}: $txt',
+          style: TextStyle(color: col, fontSize: 12.5)),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _LiveReport(id: id, initial: l))),
+    );
+  }
+}
+
 /// Laporan satu anak yang memperbarui sendiri tiap menit.
 class _LiveReport extends StatefulWidget {
   final String id;
