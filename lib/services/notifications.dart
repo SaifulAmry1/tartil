@@ -13,6 +13,8 @@ class Notifications {
   static bool _ready = false;
 
   static Future<void> init() async {
+    // Versi web hanya pratinjau: pengingat ada di APK Android.
+    if (kIsWeb) throw UnsupportedError('Notifikasi hanya di Android');
     if (_ready) return;
     try {
       tzdata.initializeTimeZones();
@@ -30,6 +32,7 @@ class Notifications {
   }
 
   static Future<void> requestPermission() async {
+    if (kIsWeb) return;
     await init();
     await _plugin
         .resolvePlatformSpecificImplementation<

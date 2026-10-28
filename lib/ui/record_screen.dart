@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -177,7 +178,7 @@ class _RecordScreenState extends State<RecordScreen> {
                 style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
           if (_modelOk == false)
-            _notice(Teks.modelTidakAda, TartilColors.merah)
+            _notice(kIsWeb ? Teks.rekamHanyaAndroid : Teks.modelTidakAda, TartilColors.merah)
           else
             _controls(),
           if (_error != null) _notice(_error!, TartilColors.merah),
