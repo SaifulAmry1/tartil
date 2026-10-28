@@ -57,6 +57,21 @@ class Teks {
   }
   static String ayat(int dari, int sampai) => 'ayat $dari-$sampai';
   static const alhamdulillah = 'Alhamdulillah, murojaah hari ini selesai.';
+  static const hariSebelumnya = 'Hari sebelumnya';
+  static const hariBerikutnya = 'Hari berikutnya';
+  static const selesaiLebihAwal = 'Sudah dimurojaah lebih awal';
+  static const tandaiLebihAwal = 'Murojaah lebih awal, tandai selesai';
+  static String lebihAwalKet(String hari) =>
+      'Bacaan $hari ini boleh dimurojaah sekarang. Setelah ditandai selesai, hari $hari nanti sudah beres.';
+  static const geserHari = 'Geser kiri atau kanan untuk pindah hari';
+  static const lanjutBesok = 'Mau lanjut? Murojaah bacaan hari berikutnya';
+  static const siklus = 'Siklus murojaah';
+  static const pilihSiklus = 'Jumlah hari per siklus';
+  static const pilihSiklusKet =
+      'Seluruh rentang hafalan selesai dalam jumlah hari ini. Mengubahnya membuat jadwal baru mulai hari ini.';
+  static const lainnyaSiklus = 'Angka lain...';
+  static String konfirmasiSiklus(int n) =>
+      'Ubah siklus menjadi $n hari? Jadwal dibuat ulang mulai hari ini dan tanda selesai siklus ini dihapus.';
   static String nilai(int n) => 'Nilai $n';
 
   // Mushaf

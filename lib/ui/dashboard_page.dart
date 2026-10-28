@@ -6,6 +6,7 @@ import '../core/stats.dart';
 import '../models/profile.dart';
 import '../services/store.dart';
 import '../teks.dart';
+import 'day_screen.dart';
 import 'plan_screen.dart';
 import 'report_screen.dart';
 import 'theme.dart';
@@ -130,6 +131,7 @@ class DashboardPage extends StatelessWidget {
             const SizedBox(height: 8),
             _doneButton(context, st.today, day.done),
           ],
+          if (day.done || off) _aheadButton(context, cycle, st.today + (off ? 0 : 1)),
           if (weak.isNotEmpty) ...[
             const SectionTitle(Teks.perluDiulang),
             Wrap(spacing: 8, runSpacing: 8, children: [
@@ -150,7 +152,10 @@ class DashboardPage extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               children: [
                 for (var i = st.today + 1; i < cycle.length && i <= st.today + 6; i++)
-                  _UpcomingCard(app: app, profile: profile, index: i, now: now),
+                  GestureDetector(
+                    onTap: () => _openDay(context, i),
+                    child: _UpcomingCard(app: app, profile: profile, index: i, now: now),
+                  ),
               ],
             ),
           ),
@@ -162,6 +167,34 @@ class DashboardPage extends StatelessWidget {
   String _rangeLabel() {
     final r = profile.range;
     return r.isJuz ? Teks.rentangJuz(r.juz) : Teks.rentangSurah(app.quran.surah(r.fromSurah!).name, app.quran.surah(r.toSurah!).name);
+  }
+
+  void _openDay(BuildContext context, int i) => Navigator.push(
+      context, MaterialPageRoute(builder: (_) => DayScreen(app: app, profile: profile, index: i)));
+
+  /// Tombol menuju hari berikutnya yang belum selesai, untuk murojaah lebih.
+  Widget _aheadButton(BuildContext context, Cycle cycle, int from) {
+    int? next;
+    for (var i = from; i < cycle.length; i++) {
+      if (!cycle.days[i].done && cycle.days[i].units.isNotEmpty) {
+        next = i;
+        break;
+      }
+    }
+    if (next == null) return const SizedBox.shrink();
+    final target = next;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        onPressed: () => _openDay(context, target),
+        icon: const Icon(Icons.fast_forward_rounded),
+        label: const Text(Teks.lanjutBesok),
+      ),
+    );
   }
 
   Widget _pill(String t) => Container(

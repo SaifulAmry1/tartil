@@ -93,6 +93,16 @@ class ProfilePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SectionTitle(Teks.siklus),
+              _card([
+                ListTile(
+                  leading: const Icon(Icons.autorenew, color: TartilColors.hijau),
+                  title: Text(Teks.siklusHari(p.cycleDays)),
+                  subtitle: Text('$range · ${Teks.hariLibur}: ${p.offDays.isEmpty ? '-' : (p.offDays.toList()..sort()).map(namaHariKe).join(', ')}'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _pickCycle(context, p),
+                ),
+              ]),
               const SectionTitle(Teks.gantiProfil),
               _card([
                 for (final x in app.profiles)
@@ -186,6 +196,59 @@ class ProfilePage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static const _cycleChoices = [7, 10, 12, 14, 15, 20, 30];
+
+  Future<void> _pickCycle(BuildContext context, Profile p) async {
+    final n = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(Teks.pilihSiklus, style: Theme.of(c).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          const Text(Teks.pilihSiklusKet, style: TextStyle(color: Colors.black54, fontSize: 13)),
+          const SizedBox(height: 14),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final d in _cycleChoices)
+              ChoiceChip(
+                label: Text('$d hari'),
+                selected: d == p.cycleDays,
+                onSelected: (_) => Navigator.pop(c, d),
+              ),
+            ActionChip(
+              label: const Text(Teks.lainnyaSiklus),
+              onPressed: () => Navigator.pop(c, -1),
+            ),
+          ]),
+        ]),
+      ),
+    );
+    if (n == null || n == p.cycleDays || !context.mounted) return;
+    if (n == -1) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileForm(app: app, profile: p)));
+      return;
+    }
+    if (p.cycle!.days.any((d) => d.done)) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          content: Text(Teks.konfirmasiSiklus(n)),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text(Teks.batal)),
+            TextButton(onPressed: () => Navigator.pop(c, true), child: const Text(Teks.ya)),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    p.cycleDays = n;
+    await app.upsert(p, resetCycle: true);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(Teks.mulaiUlangSiklus)));
+    }
   }
 
   String _summary(Profile x) {

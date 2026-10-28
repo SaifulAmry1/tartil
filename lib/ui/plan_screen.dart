@@ -5,6 +5,7 @@ import '../core/stats.dart';
 import '../models/profile.dart';
 import '../services/store.dart';
 import '../teks.dart';
+import 'day_screen.dart';
 import 'reader_screen.dart';
 import 'record_screen.dart';
 import 'theme.dart';
@@ -179,25 +180,30 @@ class SchedulePage extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isToday ? TartilColors.hijauMuda : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: isToday ? TartilColors.hijau.withValues(alpha: 0.4) : const Color(0x11000000)),
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Text('${namaHari(date)}, ${tanggalPendek(date)}',
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                      const Spacer(),
-                      Text(Teks.menit(dayLoad(d.units)), style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                child: GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => DayScreen(app: app, profile: profile, index: i),
+                  )),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isToday ? TartilColors.hijauMuda : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: isToday ? TartilColors.hijau.withValues(alpha: 0.4) : const Color(0x11000000)),
+                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Text('${namaHari(date)}, ${tanggalPendek(date)}',
+                            style: const TextStyle(fontWeight: FontWeight.w700)),
+                        const Spacer(),
+                        Text(Teks.menit(dayLoad(d.units)), style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      ]),
+                      const SizedBox(height: 4),
+                      Text(d.missed ? Teks.terlewat : (names.isEmpty ? Teks.libur : names),
+                          style: TextStyle(color: d.missed ? Colors.black45 : Colors.black87, fontSize: 13.5)),
                     ]),
-                    const SizedBox(height: 4),
-                    Text(d.missed ? Teks.terlewat : (names.isEmpty ? Teks.libur : names),
-                        style: TextStyle(color: d.missed ? Colors.black45 : Colors.black87, fontSize: 13.5)),
-                  ]),
+                  ),
                 ),
               ),
             ]),
