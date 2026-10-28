@@ -173,4 +173,24 @@ void main() {
     final old = c.toJson()..remove('l');
     expect(Cycle.fromJson(old, defaultOff: {7}).offDays, {7});
   });
+
+  test('hari yang selesai lebih awal tidak tertimpa hitung ulang', () {
+    final surahs = quran.durations(const HafalanRange.juz([29, 30]));
+    final c = Cycle.create(surahs, 12, DateTime(2026, 11, 2));
+    // Hari ke-1 selesai, lalu hari ke-6 dikerjakan lebih awal di hari yang sama.
+    c.days[0].doneAt = DateTime(2026, 11, 2, 19);
+    final early = c.days[5].units.map((u) => u.key).toList();
+    c.days[5].doneAt = DateTime(2026, 11, 2, 20);
+    // Hari ke-2 dan ke-3 terlewat.
+    c.reconcile(DateTime(2026, 11, 5), surahs);
+    expect(c.days[5].done, isTrue);
+    expect(c.days[5].units.map((u) => u.key).toList(), early);
+    expectFullCoverage(surahs, [
+      c.days[0].units,
+      for (var d = 3; d < 12; d++) c.days[d].units,
+    ]);
+    // Pengulangan surah lemah tidak masuk ke hari yang sudah selesai.
+    c.addWeak(78, surahs, DateTime(2026, 11, 5));
+    expect(c.days[5].units.map((u) => u.key).toList(), early);
+  });
 }

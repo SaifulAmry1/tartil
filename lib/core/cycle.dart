@@ -126,24 +126,24 @@ class Cycle {
 
     final todayDone = days[idx].done;
     final from = todayDone ? idx + 1 : idx;
+    // Hari yang sudah selesai lebih awal tidak diubah.
+    final open = [for (var d = from; d < days.length; d++) if (!days[d].done) d];
     final pending = <Unit>[
       for (final d in missedIdx) ...days[d].units.where((u) => !u.review),
-      for (var d = from; d < days.length; d++)
-        ...days[d].units.where((u) => !u.review),
+      for (final d in open) ...days[d].units.where((u) => !u.review),
     ];
     for (final d in missedIdx) {
       days[d].missed = true;
     }
-    if (from >= days.length) {
-      // Hari terakhir sudah selesai: sisa bacaan masuk ke hari ini.
+    if (open.isEmpty) {
+      // Sisa hari sudah selesai: sisa bacaan masuk ke hari ini.
       days[idx].units = [...days[idx].units, ...pending];
       return this;
     }
-    final remaining = days.length - from;
-    final plan = balance(pending, remaining);
+    final plan = balance(pending, open.length);
     addReviews(plan, _weakUnits(surahs, weakSurahs));
-    for (var k = 0; k < remaining; k++) {
-      days[from + k] = DayPlan(plan[k]);
+    for (var k = 0; k < open.length; k++) {
+      days[open[k]] = DayPlan(plan[k]);
     }
     return this;
   }
@@ -157,8 +157,11 @@ class Cycle {
       for (var d = from; d < days.length; d++) ...days[d].units,
     ].any((u) => u.surah == surah && u.review);
     if (hasReview) return;
-    final plan = [for (final d in days) d.units];
-    addReviews(plan, _weakUnits(surahs, [surah]), fromDay: from);
+    final plan = [
+      for (var d = from; d < days.length; d++)
+        if (!days[d].done) days[d].units,
+    ];
+    addReviews(plan, _weakUnits(surahs, [surah]));
   }
 
   Map<String, dynamic> toJson() => {
