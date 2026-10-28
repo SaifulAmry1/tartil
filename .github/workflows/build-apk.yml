@@ -14,6 +14,8 @@ env:
   # Model Whisper khusus bacaan Al-Qur'an, dikonversi ke GGML untuk whisper.cpp.
   HF_MODEL: tarteel-ai/whisper-base-ar-quran
   MODEL_KEY: ggml-quran-base-q5_1-v3
+  # Silero VAD untuk memotong jeda diam sebelum pengenalan suara.
+  VAD_FILE: ggml-silero-v5.1.2.bin
 
 jobs:
   model:
@@ -74,10 +76,34 @@ jobs:
           # Pastikan model bisa dimuat dan dijalankan oleh whisper.cpp v1.9.1.
           whisper.cpp/build/bin/whisper-cli -m model/ggml-quran.bin -f whisper.cpp/samples/jfk.wav -l ar -nt
 
+      - uses: actions/cache@v4
+        id: vadcache
+        with:
+          path: model/ggml-vad.bin
+          key: vad-${{ env.VAD_FILE }}-v1
+
+      - name: Unduh dan uji model VAD
+        if: steps.vadcache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p model
+          curl -fL --retry 3 -o model/ggml-vad.bin \
+            "https://huggingface.co/ggml-org/whisper-vad/resolve/main/$VAD_FILE"
+          ls -la model
+          if [ ! -d whisper.cpp ]; then
+            git clone --depth 1 --branch v1.9.1 https://github.com/ggml-org/whisper.cpp
+          fi
+          cmake -S whisper.cpp -B whisper.cpp/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build whisper.cpp/build -j --config Release --target whisper-cli
+          # Pastikan model Qur'an + VAD berjalan bersama di whisper.cpp v1.9.1.
+          whisper.cpp/build/bin/whisper-cli -m model/ggml-quran.bin -f whisper.cpp/samples/jfk.wav \
+            -l ar -nt --vad -vm model/ggml-vad.bin
+
       - uses: actions/upload-artifact@v4
         with:
           name: model
-          path: model/ggml-quran.bin
+          path: |
+            model/ggml-quran.bin
+            model/ggml-vad.bin
           retention-days: 3
 
   apk:

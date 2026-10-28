@@ -77,4 +77,13 @@ void main() {
     expect(back.recordings.single.surah, 112);
     expect(back.recordings.single.wrong, isEmpty);
   });
+
+  test('kunci pantauan dari isi QR atau link', () {
+    const id = 'AbC_dEf-1234567890xyzQ';
+    expect(Laporan.idFromLink(Laporan.liveUrl(id)), id);
+    expect(Laporan.idFromLink('  $id\n'), id);
+    expect(Laporan.idFromLink('https://example.com/?q=1'), isNull);
+    expect(Laporan.idFromLink('halo'), isNull);
+    expect(Laporan.idFromLink('https://saifulamry1.github.io/tartil/?p=pendek'), isNull);
+  });
 }

@@ -86,6 +86,11 @@ class Teks {
   static const berhenti = 'Berhenti & periksa';
   static const merekam = 'Merekam...';
   static const memproses = 'Memeriksa bacaan...';
+  static String memprosesKet(String panjang) =>
+      'Rekaman $panjang. Pemeriksaan di HP bisa memakan waktu sekitar sepanjang rekaman. Layar boleh tetap terbuka.';
+  static const batalPeriksa = 'Batalkan pemeriksaan';
+  static const periksaMacet =
+      'Pemeriksaan terhenti karena terlalu lama tanpa kemajuan. Coba rekam per surah atau per beberapa ayat saja.';
   static const izinMikrofon = 'Izin mikrofon dibutuhkan untuk merekam.';
   static const modelTidakAda = 'Model pengenal suara belum ada di versi aplikasi ini.';
   static const rekamHanyaAndroid = 'Rekam suara hanya tersedia di aplikasi Android. Versi web ini untuk pratinjau tampilan.';
@@ -144,8 +149,9 @@ class Teks {
   // Pantauan orang tua
   static const pantauOrtu = 'Pantauan orang tua';
   static const pantauOrtuKet =
-      'Orang tua cukup memindai QR ini sekali, atau membuka link yang dikirim. Setelah itu kemajuan murojaah, '
-      'termasuk hasil rekaman, terbarui sendiri. Tidak perlu memasang aplikasi atau membuat akun.';
+      'Orang tua cukup memindai QR ini sekali: dengan aplikasi Tartil di HP orang tua (Profil > Pantau anak), '
+      'atau dengan kamera HP biasa untuk membuka versi web. Setelah itu kemajuan murojaah, termasuk hasil rekaman, '
+      'terbarui sendiri. Tanpa akun.';
   static const pantauOrtuCatatan =
       'Data terkirim otomatis setiap ada perubahan selama HP tersambung internet. Tanpa internet, data dikirim '
       'begitu tersambung lagi. Simpan link ini hanya untuk orang tua.';
@@ -163,9 +169,24 @@ class Teks {
   static const ortuJudul = 'Pantauan murojaah';
   static String ortuKet(int n) => n == 0 ? 'Belum ada anak yang dipantau' : '$n anak dipantau';
   static const ortuKosong = 'Pindai QR di aplikasi Tartil milik anak untuk mulai memantau.';
+  static const pantauAnak = 'Pantau anak (orang tua)';
+  static const pantauAnakSub = 'Pindai QR dari HP anak, kemajuannya terbarui otomatis';
+  static const sayaOrtu = 'Saya orang tua, pantau anak';
+  static const tambahAnak = 'Tambah anak';
+  static const pindaiQr = 'Pindai QR anak';
+  static const pindaiQrSub = 'Buka Profil > Pantauan orang tua di HP anak';
+  static const pindaiQrKet = 'Arahkan kamera ke QR di HP anak (Profil > Pantauan orang tua).';
+  static const qrBukanTartil = 'QR ini bukan QR pantauan Tartil.';
+  static const izinKamera = 'Izin kamera dibutuhkan untuk memindai QR. Aktifkan di pengaturan HP.';
+  static const tempelLink = 'Tempel link pantauan';
+  static const tempelLinkSub = 'Link yang dikirim dari HP anak lewat WhatsApp';
+  static const linkTidakValid = 'Link tidak dikenali. Pastikan link pantauan dari aplikasi Tartil.';
+  static const tambah = 'Tambah';
+  static const ortuCatatanApp =
+      'Laporan memperbarui sendiri tiap 30 detik selama layar ini terbuka. Tarik ke bawah untuk memuat ulang.';
   static const ortuBelumAda = 'Data belum tersedia. Pastikan HP anak tersambung internet.';
   static const ortuCatatan =
-      'Halaman ini memperbarui sendiri tiap menit. Simpan sebagai bookmark atau tambahkan ke layar utama. '
+      'Halaman ini memperbarui sendiri tiap 30 detik. Simpan sebagai bookmark atau tambahkan ke layar utama. '
       'Untuk memantau anak lain, pindai QR dari HP anak tersebut.';
   static const kirimLaporan = 'Kirim laporan (WhatsApp, dll.)';
   static const salinLink = 'Salin link';

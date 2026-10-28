@@ -4,6 +4,6 @@ class Asr {
 
   static Future<String> prepare() async => throw UnsupportedError('Hanya di Android');
 
-  static Future<String> transcribe(String wavPath, {String? prompt}) async =>
+  static Future<String> transcribe(String wavPath, {String? prompt, void Function(int)? onProgress}) async =>
       throw UnsupportedError('Hanya di Android');
 }

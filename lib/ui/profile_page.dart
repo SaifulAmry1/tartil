@@ -159,6 +159,21 @@ class ProfilePage extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(
+                    Icons.family_restroom,
+                    color: TartilColors.hijau,
+                  ),
+                  title: const Text(Teks.pantauAnak),
+                  subtitle: const Text(Teks.pantauAnakSub),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ParentHome(inApp: true),
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
                     Icons.graphic_eq,
                     color: TartilColors.hijau,
                   ),

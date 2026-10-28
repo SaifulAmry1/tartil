@@ -8,6 +8,7 @@ import 'plan_screen.dart';
 import 'profile_form.dart';
 import 'profile_page.dart';
 import 'record_screen.dart';
+import 'report_screen.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -190,6 +191,19 @@ class _Welcome extends StatelessWidget {
                   ),
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileForm(app: app))),
                   child: const Text(Teks.buatProfil, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white54),
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () =>
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ParentHome(inApp: true))),
+                  icon: const Icon(Icons.family_restroom),
+                  label: const Text(Teks.sayaOrtu, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ]),
             ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -13,8 +14,12 @@ import '../models/recording_log.dart';
 import '../services/store.dart';
 import '../services/sync.dart';
 import '../teks.dart';
+import 'scan_screen.dart';
 import 'theme.dart';
 import 'widgets.dart';
+
+/// Selang pembaruan otomatis laporan pantauan.
+const _refreshEvery = Duration(seconds: 30);
 
 String _surah(int n) => surahNames[n - 1];
 
@@ -434,10 +439,12 @@ class _Message extends StatelessWidget {
 }
 
 /// Daftar anak yang dipantau orang tua. Setiap link yang pernah dipindai
-/// tersimpan di browser ini.
+/// tersimpan di browser atau di HP ini. [inApp]: dibuka dari menu aplikasi
+/// Android (orang tua memasang aplikasi yang sama).
 class ParentHome extends StatefulWidget {
   final String? openId;
-  const ParentHome({super.key, this.openId});
+  final bool inApp;
+  const ParentHome({super.key, this.openId, this.inApp = false});
 
   @override
   State<ParentHome> createState() => _ParentHomeState();
@@ -455,7 +462,7 @@ class _ParentHomeState extends State<ParentHome> {
     super.initState();
     _init();
     // Perbarui sendiri selama halaman terbuka.
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _load());
+    _timer = Timer.periodic(_refreshEvery, (_) => _load());
   }
 
   @override
@@ -463,6 +470,86 @@ class _ParentHomeState extends State<ParentHome> {
     _timer?.cancel();
     super.dispose();
   }
+
+  Future<void> _add(String id) async {
+    if (!_ids.contains(id)) {
+      setState(() => _ids.insert(0, id));
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_key, _ids);
+      } catch (_) {}
+    }
+    await _load();
+    if (!mounted) return;
+    if (_data[id] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(Teks.ortuBelumAda)));
+    } else {
+      _open(id);
+    }
+  }
+
+  Future<void> _scan() async {
+    final id = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => const ScanScreen()));
+    if (id != null) await _add(id);
+  }
+
+  Future<void> _paste() async {
+    final ctrl = TextEditingController();
+    final clip = await Clipboard.getData(Clipboard.kTextPlain);
+    if (clip?.text != null && Laporan.idFromLink(clip!.text!) != null) ctrl.text = clip.text!.trim();
+    if (!mounted) return;
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(Teks.tempelLink),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'https://saifulamry1.github.io/tartil/?p=...'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text(Teks.batal)),
+          FilledButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text(Teks.tambah)),
+        ],
+      ),
+    );
+    if (text == null || !mounted) return;
+    final id = Laporan.idFromLink(text);
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(Teks.linkTidakValid)));
+      return;
+    }
+    await _add(id);
+  }
+
+  void _addMenu() => showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.qr_code_scanner, color: TartilColors.hijau),
+                title: const Text(Teks.pindaiQr),
+                subtitle: const Text(Teks.pindaiQrSub),
+                onTap: () {
+                  Navigator.pop(context);
+                  _scan();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.link, color: TartilColors.hijau),
+              title: const Text(Teks.tempelLink),
+              subtitle: const Text(Teks.tempelLinkSub),
+              onTap: () {
+                Navigator.pop(context);
+                _paste();
+              },
+            ),
+            const SizedBox(height: 8),
+          ]),
+        ),
+      );
 
   Future<void> _init() async {
     try {
@@ -509,6 +596,13 @@ class _ParentHomeState extends State<ParentHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: TartilColors.emas,
+        foregroundColor: Colors.white,
+        onPressed: _addMenu,
+        icon: const Icon(Icons.person_add_alt_1),
+        label: const Text(Teks.tambahAnak),
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(padding: EdgeInsets.zero, physics: const AlwaysScrollableScrollPhysics(), children: [
@@ -518,10 +612,14 @@ class _ParentHomeState extends State<ParentHome> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    Rub(size: 26, color: TartilColors.emas),
-                    SizedBox(width: 8),
-                    Text(Teks.appName,
+                  Row(children: [
+                    if (widget.inApp) ...[
+                      const BackButton(color: Colors.white),
+                      const SizedBox(width: 4),
+                    ],
+                    const Rub(size: 26, color: TartilColors.emas),
+                    const SizedBox(width: 8),
+                    const Text(Teks.appName,
                         style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
                   ]),
                   const SizedBox(height: 16),
@@ -536,10 +634,23 @@ class _ParentHomeState extends State<ParentHome> {
             padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (_loading) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
-              if (!_loading && _ids.isEmpty) const Text(Teks.ortuKosong, textAlign: TextAlign.center),
+              if (!_loading && _ids.isEmpty) ...[
+                const Icon(Icons.family_restroom, size: 56, color: TartilColors.hijau),
+                const SizedBox(height: 8),
+                const Text(Teks.ortuKosong, textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                if (!kIsWeb)
+                  FilledButton.icon(
+                    onPressed: _scan,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text(Teks.pindaiQr),
+                  ),
+              ],
               for (final id in _ids) _childCard(id),
               const SizedBox(height: 12),
-              const Text(Teks.ortuCatatan, style: TextStyle(color: Colors.black45, fontSize: 12)),
+              Text(widget.inApp ? Teks.ortuCatatanApp : Teks.ortuCatatan,
+                  style: const TextStyle(color: Colors.black45, fontSize: 12)),
+              const SizedBox(height: 70),
             ]),
           ),
         ]),
@@ -625,7 +736,7 @@ class _LiveReportState extends State<_LiveReport> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _load());
+    _timer = Timer.periodic(_refreshEvery, (_) => _load());
     if (_l == null) _load();
   }
 
