@@ -6,6 +6,7 @@ import '../teks.dart';
 import 'about_screen.dart';
 import 'profile_form.dart';
 import 'record_screen.dart';
+import 'report_screen.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -131,6 +132,25 @@ class ProfilePage extends StatelessWidget {
               ]),
               const SectionTitle(Teks.lainnya),
               _card([
+                ListTile(
+                  leading: const Icon(
+                    Icons.qr_code_2,
+                    color: TartilColors.hijau,
+                  ),
+                  title: const Text(Teks.pantauOrtu),
+                  subtitle: const Text(Teks.kirimLaporan),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ShareReportScreen(
+                        app: app,
+                        profile: p,
+                        rangeLabel: range,
+                      ),
+                    ),
+                  ),
+                ),
                 ListTile(
                   leading: const Icon(
                     Icons.graphic_eq,

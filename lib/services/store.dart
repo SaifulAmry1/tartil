@@ -63,7 +63,8 @@ class AppState extends ChangeNotifier {
     for (final p in profiles) {
       changed |= _refresh(p);
     }
-    if (changed) _save();
+    // Selalu bangun ulang tampilan: tanggal di layar bisa sudah berganti.
+    changed ? _save() : notifyListeners();
   }
 
   bool _refresh(Profile p) {
@@ -71,7 +72,8 @@ class AppState extends ChangeNotifier {
     final surahs = quran.durations(p.range);
     final before = p.cycle == null ? null : jsonEncode(p.cycle!.toJson());
     p.cycle = p.cycle == null
-        ? Cycle.create(surahs, p.cycleDays, today, weakSurahs: p.weakSurahs)
+        ? Cycle.create(surahs, p.cycleDays, today,
+            weakSurahs: p.weakSurahs, offDays: p.offDays)
         : p.cycle!.reconcile(today, surahs, weakSurahs: p.weakSurahs);
     return before != jsonEncode(p.cycle!.toJson());
   }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../core/cycle.dart';
 import '../core/schedule.dart';
 import '../core/stats.dart';
 import '../models/profile.dart';
 import '../services/store.dart';
 import '../teks.dart';
 import 'plan_screen.dart';
+import 'report_screen.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -23,6 +25,7 @@ class DashboardPage extends StatelessWidget {
     final now = DateTime.now();
     final st = CycleStats.of(cycle, now);
     final day = cycle.days[st.today];
+    final off = cycle.isOff(now);
     final scores = profile.scores.values;
     final avg = scores.isEmpty ? '-' : '${(scores.reduce((a, b) => a + b) / scores.length).round()}';
     final weak = profile.weakSurahs.toList()..sort();
@@ -41,7 +44,14 @@ class DashboardPage extends StatelessWidget {
                   const Text(Teks.appName,
                       style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
                   const Spacer(),
-                  Text(tanggalPendek(now), style: const TextStyle(color: Colors.white70)),
+                  IconButton(
+                    tooltip: Teks.pantauOrtu,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.qr_code_2, color: Colors.white),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => ShareReportScreen(app: app, profile: profile, rangeLabel: _rangeLabel()),
+                    )),
+                  ),
                 ]),
                 const SizedBox(height: 18),
                 const Text(Teks.salam, style: TextStyle(color: Colors.white70, fontSize: 14)),
@@ -69,7 +79,8 @@ class DashboardPage extends StatelessWidget {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text(Teks.kemajuanSiklus, style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+                        Text(tanggalHari(now),
+                            style: const TextStyle(color: TartilColors.emas, fontSize: 13.5, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 2),
                         Text(Teks.hariKe(st.today + 1, cycle.length),
                             style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
@@ -99,12 +110,26 @@ class DashboardPage extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(child: StatTile(icon: Icons.star_rounded, value: avg, label: Teks.rataNilai, color: TartilColors.emas)),
           ]),
-          SectionTitle(Teks.jadwalHariIni,
+          if (off) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: const Color(0xFFFFF6E0), borderRadius: BorderRadius.circular(16)),
+              child: Row(children: [
+                const Icon(Icons.beach_access_outlined, color: TartilColors.oranye),
+                const SizedBox(width: 10),
+                Expanded(child: Text(Teks.liburHariIni(namaHari(now)), style: const TextStyle(fontWeight: FontWeight.w600))),
+              ]),
+            ),
+          ],
+          SectionTitle(off ? '${Teks.liburBesok} · ${tanggalHari(cycle.dateOf(st.today))}' : Teks.jadwalHariIni,
               trailing: Text(Teks.menit(dayLoad(day.units)), style: const TextStyle(color: Colors.black54))),
           if (day.units.isEmpty) const Card(child: ListTile(title: Text(Teks.libur))),
           for (final u in day.units) UnitCard(app: app, profile: profile, unit: u),
-          const SizedBox(height: 8),
-          _doneButton(context, st.today, day.done),
+          if (!off) ...[
+            const SizedBox(height: 8),
+            _doneButton(context, st.today, day.done),
+          ],
           if (weak.isNotEmpty) ...[
             const SectionTitle(Teks.perluDiulang),
             Wrap(spacing: 8, runSpacing: 8, children: [
@@ -125,7 +150,7 @@ class DashboardPage extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               children: [
                 for (var i = st.today + 1; i < cycle.length && i <= st.today + 6; i++)
-                  _UpcomingCard(app: app, profile: profile, index: i, offset: i - st.today),
+                  _UpcomingCard(app: app, profile: profile, index: i, now: now),
               ],
             ),
           ),
@@ -174,15 +199,15 @@ class _UpcomingCard extends StatelessWidget {
   final AppState app;
   final Profile profile;
   final int index;
-  final int offset;
+  final DateTime now;
 
-  const _UpcomingCard({required this.app, required this.profile, required this.index, required this.offset});
+  const _UpcomingCard({required this.app, required this.profile, required this.index, required this.now});
 
   @override
   Widget build(BuildContext context) {
     final c = profile.cycle!;
     final d = c.days[index];
-    final date = c.start.add(Duration(days: index));
+    final date = c.dateOf(index);
     final names = d.units.map((u) => app.quran.surah(u.surah).name).toSet().toList();
     return Container(
       width: 168,
@@ -195,7 +220,7 @@ class _UpcomingCard extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Text(offset == 1 ? Teks.besok : namaHari(date),
+          Text(daysBetween(now, date) == 1 ? Teks.besok : namaHari(date),
               style: const TextStyle(fontWeight: FontWeight.w700, color: TartilColors.hijau)),
           const Spacer(),
           Text(tanggalPendek(date), style: const TextStyle(fontSize: 12, color: Colors.black45)),

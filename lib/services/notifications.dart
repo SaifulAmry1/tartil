@@ -40,17 +40,30 @@ class Notifications {
         ?.requestNotificationsPermission();
   }
 
-  static int _id(int index) => 1000 + index;
+  static int _id(int index, int weekday) => 1000 + index * 8 + weekday;
 
+  /// Satu pengingat pekanan untuk tiap hari murojaah; hari libur dilewati.
   static Future<void> schedule(Profile p, int index) async {
     try {
-      await init();
+      await cancel(index);
       final now = tz.TZDateTime.now(tz.local);
-      var at = tz.TZDateTime(tz.local, now.year, now.month, now.day,
-          p.reminderHour, p.reminderMinute);
-      if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
-      await _plugin.zonedSchedule(
-        id: _id(index),
+      for (var w = DateTime.monday; w <= DateTime.sunday; w++) {
+        if (p.offDays.contains(w)) continue;
+        var at = tz.TZDateTime(tz.local, now.year, now.month, now.day,
+            p.reminderHour, p.reminderMinute);
+        while (at.weekday != w || !at.isAfter(now)) {
+          at = at.add(const Duration(days: 1));
+        }
+        await _scheduleAt(p, _id(index, w), at);
+      }
+    } catch (e) {
+      debugPrint('Gagal menjadwalkan pengingat: $e');
+    }
+  }
+
+  static Future<void> _scheduleAt(Profile p, int id, tz.TZDateTime at) =>
+      _plugin.zonedSchedule(
+        id: id,
         title: Teks.notifJudul(p.name),
         body: Teks.notifIsi,
         scheduledDate: at,
@@ -64,17 +77,15 @@ class Notifications {
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
-    } catch (e) {
-      debugPrint('Gagal menjadwalkan pengingat: $e');
-    }
-  }
 
   static Future<void> cancel(int index) async {
     try {
       await init();
-      await _plugin.cancel(id: _id(index));
+      for (var w = DateTime.monday; w <= DateTime.sunday; w++) {
+        await _plugin.cancel(id: _id(index, w));
+      }
     } catch (e) {
       debugPrint('Gagal membatalkan pengingat: $e');
     }

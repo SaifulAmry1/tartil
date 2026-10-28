@@ -142,4 +142,35 @@ void main() {
     expect(s.done, 3);
     expect(s.streak, 2);
   });
+
+  test('hari Ahad libur: tidak dihitung dan tidak terlewat', () {
+    final surahs = quran.durations(const HafalanRange.juz([29, 30]));
+    // 31 Okt 2026 = Sabtu, 1 Nov = Ahad.
+    final c = Cycle.create(surahs, 12, DateTime(2026, 10, 31), offDays: {DateTime.sunday});
+    expect(c.dateOf(0), dateOnly(DateTime(2026, 10, 31)));
+    expect(c.dateOf(1), dateOnly(DateTime(2026, 11, 2)));
+    expect(c.dateOf(11), dateOnly(DateTime(2026, 11, 13)));
+    expect(c.isOff(DateTime(2026, 11, 1)), isTrue);
+    expect(c.indexOf(DateTime(2026, 11, 1)), 1);
+    expect(c.indexOf(DateTime(2026, 11, 2)), 1);
+    expect(c.indexOf(DateTime(2026, 11, 3)), 2);
+    c.days[0].doneAt = DateTime(2026, 10, 31, 19);
+    c.reconcile(DateTime(2026, 11, 1), surahs);
+    c.reconcile(DateTime(2026, 11, 2), surahs);
+    expect(c.days.where((d) => d.missed), isEmpty);
+    // Siklus 12 hari kerja selesai 13 Nov; siklus baru mulai Sabtu 14 Nov.
+    expect(c.isFinished(DateTime(2026, 11, 13)), isFalse);
+    expect(c.reconcile(DateTime(2026, 11, 14), surahs).number, 2);
+  });
+
+  test('siklus yang dibuat di hari libur mulai di hari kerja berikutnya', () {
+    final surahs = quran.durations(const HafalanRange.juz([30]));
+    final c = Cycle.create(surahs, 5, DateTime(2026, 11, 1), offDays: {DateTime.sunday});
+    expect(c.start, dateOnly(DateTime(2026, 11, 2)));
+    final back = Cycle.fromJson(c.toJson());
+    expect(back.offDays, {DateTime.sunday});
+    // Data lama tanpa hari libur memakai bawaan dari profil.
+    final old = c.toJson()..remove('l');
+    expect(Cycle.fromJson(old, defaultOff: {7}).offDays, {7});
+  });
 }

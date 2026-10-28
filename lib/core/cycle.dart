@@ -36,9 +36,26 @@ class Cycle {
   final List<DayPlan> days;
   final int number;
 
-  Cycle(this.start, this.days, {this.number = 1});
+  /// Hari libur pekanan (DateTime.weekday, 7 = Ahad). Hari libur tidak
+  /// dihitung sebagai hari siklus dan tidak pernah dianggap terlewat.
+  final Set<int> offDays;
+
+  Cycle(this.start, this.days, {this.number = 1, Set<int>? offDays})
+      : offDays = offDays ?? const {};
 
   int get length => days.length;
+
+  bool isOff(DateTime t) => offDays.contains(dateOnly(t).weekday);
+
+  /// Hari kerja pertama pada atau setelah [t].
+  static DateTime firstWorkday(DateTime t, Set<int> off) {
+    var d = dateOnly(t);
+    if (off.length >= 7) return d;
+    while (off.contains(d.weekday)) {
+      d = d.add(const Duration(days: 1));
+    }
+    return d;
+  }
 
   factory Cycle.create(
     List<SurahDurations> surahs,
@@ -46,14 +63,38 @@ class Cycle {
     DateTime start, {
     Iterable<int> weakSurahs = const [],
     int number = 1,
+    Set<int> offDays = const {},
   }) {
     final plan = planCycle(surahs, days);
     addReviews(plan, _weakUnits(surahs, weakSurahs));
-    return Cycle(dateOnly(start), [for (final d in plan) DayPlan(d)],
-        number: number);
+    return Cycle(firstWorkday(start, offDays), [for (final d in plan) DayPlan(d)],
+        number: number, offDays: offDays);
   }
 
-  int indexOf(DateTime today) => daysBetween(start, today);
+  /// Indeks hari siklus untuk tanggal [today]: jumlah hari kerja sejak
+  /// awal siklus. Pada hari libur, hasilnya indeks hari kerja berikutnya.
+  int indexOf(DateTime today) {
+    final n = daysBetween(start, today);
+    if (n <= 0 || offDays.isEmpty) return n;
+    var count = 0;
+    for (var k = 0; k < n; k++) {
+      if (!isOff(start.add(Duration(days: k)))) count++;
+    }
+    return count;
+  }
+
+  /// Tanggal hari siklus ke-[index].
+  DateTime dateOf(int index) {
+    var d = start;
+    var count = 0;
+    while (true) {
+      if (!isOff(d) || offDays.length >= 7) {
+        if (count == index) return d;
+        count++;
+      }
+      d = d.add(const Duration(days: 1));
+    }
+  }
 
   DayPlan? dayAt(DateTime today) {
     final i = indexOf(today);
@@ -74,7 +115,7 @@ class Cycle {
     final idx = indexOf(today);
     if (idx >= days.length) {
       return Cycle.create(surahs, days.length, today,
-          weakSurahs: weakSurahs, number: number + 1);
+          weakSurahs: weakSurahs, number: number + 1, offDays: offDays);
     }
     if (idx <= 0) return this;
     final missedIdx = [
@@ -109,7 +150,8 @@ class Cycle {
 
   /// Tambahkan pengulangan surah yang baru dinilai lemah ke sisa hari.
   void addWeak(int surah, List<SurahDurations> surahs, DateTime today) {
-    final from = indexOf(today) + 1;
+    // Hari libur: hari kerja berikutnya belum dimulai, jadi ikut dihitung.
+    final from = indexOf(today) + (isOff(today) ? 0 : 1);
     if (from >= days.length) return;
     final hasReview = [
       for (var d = from; d < days.length; d++) ...days[d].units,
@@ -122,13 +164,16 @@ class Cycle {
   Map<String, dynamic> toJson() => {
         's': start.toIso8601String(),
         'n': number,
+        'l': offDays.toList()..sort(),
         'd': [for (final d in days) d.toJson()],
       };
 
-  factory Cycle.fromJson(Map<String, dynamic> j) => Cycle(
+  /// [defaultOff] dipakai untuk data lama yang belum menyimpan hari libur.
+  factory Cycle.fromJson(Map<String, dynamic> j, {Set<int> defaultOff = const {}}) => Cycle(
         DateTime.parse(j['s'] as String),
         [for (final d in j['d'] as List) DayPlan.fromJson(d as Map<String, dynamic>)],
         number: j['n'] as int? ?? 1,
+        offDays: j['l'] == null ? defaultOff : {for (final x in j['l'] as List) x as int},
       );
 }
 
