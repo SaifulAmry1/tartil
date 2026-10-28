@@ -128,7 +128,8 @@ class SchedulePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cycle = profile.cycle!;
-    final st = CycleStats.of(cycle, DateTime.now());
+    final now = DateTime.now();
+    final st = CycleStats.of(cycle, now);
     return Scaffold(
       appBar: AppBar(
         title: const Text(Teks.semuaJadwal),
@@ -146,8 +147,8 @@ class SchedulePage extends StatelessWidget {
         itemCount: cycle.length,
         itemBuilder: (context, i) {
           final d = cycle.days[i];
-          final date = cycle.start.add(Duration(days: i));
-          final isToday = i == st.today;
+          final date = cycle.dateOf(i);
+          final isToday = i == st.today && !cycle.isOff(now);
           final names = d.units.map((u) {
             final n = app.quran.surah(u.surah).name;
             final part = u.isWhole ? '' : ' (${u.fromAyah}-${u.toAyah})';

@@ -30,6 +30,8 @@ class Teks {
   static const jumlahHari = 'Jumlah hari per siklus';
   static const hariTidakSah = 'Isi angka 1 sampai 365';
   static const pengingat = 'Pengingat harian';
+  static const hariLibur = 'Hari libur';
+  static const hariLiburKet = 'Tidak dihitung dalam siklus dan tidak dianggap terlewat.';
   static const simpan = 'Simpan';
   static const hapus = 'Hapus profil';
   static String konfirmasiHapus(String n) => 'Hapus profil "$n" beserta riwayatnya?';
@@ -45,6 +47,8 @@ class Teks {
   static const ulang = 'Ulang';
   static const terlewat = 'Terlewat, dipindah ke hari lain';
   static const libur = 'Tidak ada bacaan';
+  static String liburHariIni(String hari) => 'Hari ini $hari, jadwal libur murojaah.';
+  static const liburBesok = 'Murojaah berikutnya';
   static const rekam = 'Rekam';
   static const baca = 'Baca';
   static String menit(double detik) {
@@ -121,6 +125,35 @@ class Teks {
   static String rentangSurah(String a, String b) => '$a sampai $b';
   static String siklusHari(int n) => 'Siklus $n hari';
   static String pengingatJam(String jam) => 'Pengingat $jam';
+
+  // Pantauan orang tua
+  static const pantauOrtu = 'Pantauan orang tua';
+  static const pantauOrtuKet =
+      'Orang tua memindai QR ini atau membuka link yang dikirim untuk melihat kemajuan murojaah. '
+      'Tidak perlu memasang aplikasi atau membuat akun.';
+  static const pantauOrtuCatatan =
+      'Laporan berisi keadaan saat dibagikan. Kirim ulang secara berkala, misalnya tiap malam setelah murojaah, '
+      'agar orang tua melihat kemajuan terbaru.';
+  static const kirimLaporan = 'Kirim laporan (WhatsApp, dll.)';
+  static const salinLink = 'Salin link';
+  static const linkDisalin = 'Link laporan disalin';
+  static const lihatLaporan = 'Lihat laporan seperti orang tua';
+  static const lapNamaHalaman = 'Laporan murojaah';
+  static String lapJudul(String nama, String rentang) => 'Laporan murojaah $nama ($rentang)';
+  static String lapAngka(int selesai, int total, int terlewat, int beruntun) =>
+      'Selesai $selesai/$total hari · terlewat $terlewat · beruntun $beruntun hari';
+  static const lapHariIniSelesai = 'Murojaah hari ini sudah selesai.';
+  static const lapHariIniBelum = 'Murojaah hari ini belum selesai.';
+  static const lapLihat = 'Lihat detail';
+  static String lapDibuat(String waktu) => 'Dibagikan $waktu';
+  static String lapKedaluwarsa(int hari) =>
+      'Laporan ini dibagikan $hari hari lalu. Minta anak membagikan ulang untuk melihat kemajuan terbaru.';
+  static const lapRiwayat = 'Hari per hari';
+  static const lapSelesai = 'Selesai';
+  static const lapTerlewat = 'Terlewat';
+  static const lapBelum = 'Belum';
+  static const lapHariIni = 'Hari ini';
+  static const lapRusak = 'Link laporan tidak bisa dibaca. Minta anak membagikan ulang dari aplikasi Tartil.';
 
   // Notifikasi
   static const kanalNama = 'Pengingat murojaah';

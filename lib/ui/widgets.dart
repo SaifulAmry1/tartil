@@ -18,6 +18,17 @@ String tanggalPendek(DateTime d) => '${d.day} ${_bulan[d.month - 1].substring(0,
 
 String namaHari(DateTime d) => _hari[d.weekday - 1];
 
+/// Nama hari dari nomor DateTime.weekday (1 = Senin).
+String namaHariKe(int weekday) => _hari[weekday - 1];
+
+/// Contoh: "Rabu, 28 Okt 2026".
+String tanggalHari(DateTime d) =>
+    '${_hari[d.weekday - 1]}, ${d.day} ${_bulan[d.month - 1].substring(0, 3)} ${d.year}';
+
+/// Contoh: "28 Okt 2026, 19.30".
+String waktuPendek(DateTime d) =>
+    '${tanggalPendek(d)} ${d.year}, ${d.hour.toString().padLeft(2, '0')}.${d.minute.toString().padLeft(2, '0')}';
+
 /// Avatar bulat berisi huruf awal nama profil, warnanya tetap per profil.
 class ProfileAvatar extends StatelessWidget {
   final Profile profile;

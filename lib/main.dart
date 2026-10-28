@@ -1,14 +1,22 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'core/report.dart';
 import 'services/notifications.dart';
 import 'services/store.dart';
 import 'teks.dart';
 import 'ui/home_screen.dart';
+import 'ui/report_screen.dart';
 import 'ui/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Versi web dibuka dari link laporan orang tua: tampilkan laporan saja.
+  final report = kIsWeb ? Uri.base.queryParameters['r'] : null;
+  if (report != null) {
+    runApp(ReportApp(laporan: Laporan.decode(report), builder: _phoneFrame));
+    return;
+  }
   final app = await AppState.load();
   await Notifications.rescheduleAll(app.profiles);
   runApp(TartilApp(app: app));

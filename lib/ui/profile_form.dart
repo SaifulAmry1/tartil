@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../core/cycle.dart';
 import '../data/quran_data.dart';
 import '../models/profile.dart';
 import '../services/notifications.dart';
 import '../services/store.dart';
 import '../teks.dart';
+import 'widgets.dart';
 
 class ProfileForm extends StatefulWidget {
   final AppState app;
@@ -28,6 +30,7 @@ class _ProfileFormState extends State<ProfileForm> {
     hour: widget.profile?.reminderHour ?? 19,
     minute: widget.profile?.reminderMinute ?? 0,
   );
+  late final Set<int> _off = {...widget.profile?.offDays ?? {Profile.defaultOffDay}};
   String? _juzError;
 
   @override
@@ -66,6 +69,14 @@ class _ProfileFormState extends State<ProfileForm> {
       ..cycleDays = days
       ..reminderHour = _time.hour
       ..reminderMinute = _time.minute;
+    final c = p.cycle;
+    final offChanged = p.offDays.length != _off.length || !p.offDays.containsAll(_off);
+    p.offDays = {..._off};
+    if (!reset && offChanged && c != null) {
+      // Hari libur berubah: kemajuan tetap, tanggal tiap hari disesuaikan.
+      p.cycle = Cycle(Cycle.firstWorkday(c.start, p.offDays), c.days,
+          number: c.number, offDays: p.offDays);
+    }
     await Notifications.requestPermission();
     await widget.app.upsert(p, resetCycle: reset);
     if (!mounted) return;
@@ -167,6 +178,30 @@ class _ProfileFormState extends State<ProfileForm> {
                 final n = int.tryParse(v ?? '');
                 return n == null || n < 1 || n > 365 ? Teks.hariTidakSah : null;
               },
+            ),
+            const SizedBox(height: 20),
+            Text(Teks.hariLibur, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 2),
+            const Text(Teks.hariLiburKet, style: TextStyle(color: Colors.black54, fontSize: 12.5)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (var w = DateTime.monday; w <= DateTime.sunday; w++)
+                  FilterChip(
+                    label: Text(namaHariKe(w)),
+                    selected: _off.contains(w),
+                    // Minimal satu hari dalam sepekan tetap hari murojaah.
+                    onSelected: (on) => setState(() {
+                      if (!on) {
+                        _off.remove(w);
+                      } else if (_off.length < 6) {
+                        _off.add(w);
+                      }
+                    }),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             ListTile(
